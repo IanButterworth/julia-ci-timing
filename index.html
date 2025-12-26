@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Julia CI Timing</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        /* GitHub-style colors with automatic light/dark mode */
+        :root {
+            --color-canvas-default: #ffffff;
+            --color-canvas-subtle: #f6f8fa;
+            --color-canvas-inset: #eff2f5;
+            --color-border-default: #d0d7de;
+            --color-border-muted: #d8dee4;
+            --color-fg-default: #1f2328;
+            --color-fg-muted: #656d76;
+            --color-fg-subtle: #6e7781;
+            --color-accent-fg: #0969da;
+            --color-accent-emphasis: #0969da;
+            --color-success-fg: #1a7f37;
+            --color-danger-fg: #d1242f;
+            --color-attention-fg: #9a6700;
+            --color-btn-bg: #f6f8fa;
+            --color-btn-border: rgba(31,35,40,0.15);
+            --color-btn-hover-bg: #f3f4f6;
+            --color-btn-active-bg: hsla(220,14%,93%,1);
+            --color-btn-primary-bg: #1f883d;
+            --color-btn-primary-border: rgba(31,35,40,0.15);
+            --color-btn-primary-hover-bg: #1a7f37;
+            --color-neutral-muted: rgba(175,184,193,0.2);
+            --color-overlay-shadow: 0 1px 3px rgba(31,35,40,0.12), 0 8px 24px rgba(66,74,83,0.12);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-canvas-default: #0d1117;
+                --color-canvas-subtle: #161b22;
+                --color-canvas-inset: #010409;
+                --color-border-default: #30363d;
+                --color-border-muted: #21262d;
+                --color-fg-default: #e6edf3;
+                --color-fg-muted: #8b949e;
+                --color-fg-subtle: #6e7681;
+                --color-accent-fg: #58a6ff;
+                --color-accent-emphasis: #1f6feb;
+                --color-success-fg: #3fb950;
+                --color-danger-fg: #f85149;
+                --color-attention-fg: #d29922;
+                --color-btn-bg: #21262d;
+                --color-btn-border: rgba(240,246,252,0.1);
+                --color-btn-hover-bg: #30363d;
+                --color-btn-active-bg: hsla(212,12%,18%,1);
+                --color-btn-primary-bg: #238636;
+                --color-btn-primary-border: rgba(240,246,252,0.1);
+                --color-btn-primary-hover-bg: #2ea043;
+                --color-neutral-muted: rgba(110,118,129,0.4);
+                --color-overlay-shadow: 0 0 0 1px #30363d, 0 16px 32px rgba(1,4,9,0.85);
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--color-canvas-default);
+            color: var(--color-fg-default);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--color-canvas-subtle);
+            border-bottom: 1px solid var(--color-border-default);
+            flex-shrink: 0;
+        }
+        .toolbar h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-fg-default);
+            margin-right: 16px;
+        }
+        .toolbar .updated {
+            color: var(--color-fg-muted);
+            font-size: 12px;
+            margin-left: auto;
+        }
+        .btn {
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--color-btn-bg);
+            border: 1px solid var(--color-btn-border);
+            border-radius: 6px;
+            color: var(--color-fg-default);
+            cursor: pointer;
+            line-height: 20px;
+        }
+        .btn:hover { background: var(--color-btn-hover-bg); }
+        .btn.primary {
+            background: var(--color-btn-primary-bg);
+            border-color: var(--color-btn-primary-border);
+            color: #fff;
+        }
+        .btn.primary:hover { background: var(--color-btn-primary-hover-bg); }
+
+        /* Main layout */
+        .main {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Sidebar with matrix */
+        .sidebar {
+            width: 320px;
+            background: var(--color-canvas-subtle);
+            border-right: 1px solid var(--color-border-default);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        /* Job Matrix */
+        .job-matrix {
+            padding: 8px;
+            flex-shrink: 0;
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .matrix-table th, .matrix-table td {
+            padding: 4px 6px;
+            text-align: center;
+            border: 1px solid var(--color-border-muted);
+        }
+        .matrix-table th {
+            background: var(--color-canvas-inset);
+            font-weight: 600;
+            color: var(--color-fg-default);
+        }
+        .matrix-table th.clickable {
+            cursor: pointer;
+        }
+        .matrix-table th.clickable:hover {
+            background: var(--color-neutral-muted);
+        }
+        .matrix-table th.row-header {
+            text-align: left;
+            white-space: nowrap;
+        }
+        .matrix-cell {
+            cursor: pointer;
+            min-width: 50px;
+            position: relative;
+        }
+        .matrix-cell:hover {
+            background: var(--color-neutral-muted);
+        }
+        .matrix-cell .job-count {
+            font-size: 10px;
+            color: var(--color-fg-muted);
+        }
+        .matrix-cell.has-selection {
+            background: var(--color-accent-emphasis);
+            color: #fff;
+        }
+        .matrix-cell.has-selection .job-count {
+            color: rgba(255,255,255,0.8);
+        }
+        .matrix-cell.partial-selection {
+            background: rgba(31, 136, 61, 0.3);
+        }
+        .matrix-corner {
+            cursor: default;
+        }
+
+        /* Job list below matrix */
+        .job-list-section {
+            border-top: 1px solid var(--color-border-default);
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .job-list-header {
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--color-fg-muted);
+            flex-shrink: 0;
+        }
+        .job-list {
+            padding: 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .job-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 12px;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0.4;
+        }
+        .job-item:hover { background: var(--color-neutral-muted); }
+        .job-item.selected { opacity: 1; }
+        .job-item .job-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--color-fg-default);
+        }
+        .job-item .job-median {
+            color: var(--color-fg-muted);
+            font-size: 9px;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+        }
+        .color-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Chart area */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--color-canvas-default);
+        }
+        .chart-container {
+            flex: 1;
+            padding: 12px;
+            min-height: 0;
+            position: relative;
+        }
+        .chart-wrapper {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 1px;
+            background: var(--color-border-default);
+            border-top: 1px solid var(--color-border-default);
+            flex-shrink: 0;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .stats-bar table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-canvas-subtle);
+        }
+        .stats-bar th, .stats-bar td {
+            padding: 6px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border-muted);
+        }
+        .stats-bar th {
+            background: var(--color-canvas-inset);
+            color: var(--color-fg-muted);
+            font-weight: 600;
+            font-size: 11px;
+            position: sticky;
+            top: 0;
+        }
+        .stats-bar td {
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 11px;
+        }
+        .stats-bar tr:hover { background: var(--color-neutral-muted); }
+
+        .loading { padding: 20px; text-align: center; color: var(--color-fg-muted); }
+        .error { color: var(--color-danger-fg); }
+
+        /* Popup */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .popup-overlay.visible { display: flex; align-items: center; justify-content: center; }
+        .popup {
+            background: var(--color-canvas-default);
+            border: 1px solid var(--color-border-default);
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 300px;
+            max-width: 420px;
+            box-shadow: var(--color-overlay-shadow);
+        }
+        .popup h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-fg-default);
+        }
+        .popup-info { font-size: 13px; margin-bottom: 16px; }
+        .popup-info div { margin: 6px 0; }
+        .popup-info .label { color: var(--color-fg-muted); }
+        .popup-info code {
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            background: var(--color-neutral-muted);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .popup-links { display: flex; gap: 8px; }
+        .popup-links a {
+            flex: 1;
+            padding: 8px 16px;
+            text-align: center;
+            background: var(--color-btn-primary-bg);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .popup-links a:hover { background: var(--color-btn-primary-hover-bg); }
+        .popup-links a.secondary {
+            background: var(--color-btn-bg);
+            border: 1px solid var(--color-btn-border);
+            color: var(--color-fg-default);
+        }
+        .popup-links a.secondary:hover { background: var(--color-btn-hover-bg); }
+        .popup-close {
+            position: absolute;
+            top: 8px; right: 10px;
+            background: none; border: none;
+            color: var(--color-fg-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <h1>🔬 Julia CI Timing</h1>
+        <button class="btn" id="btn-all" onclick="selectAllJobs()">All</button>
+        <button class="btn" id="btn-none" onclick="deselectAllJobs()">None</button>
+        <span class="updated" id="last-updated"></span>
+    </div>
+
+    <div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+        <div class="popup" onclick="event.stopPropagation()">
+            <h3 id="popup-title">Job Details</h3>
+            <div class="popup-info">
+                <div><span class="label">Job:</span> <span id="popup-job"></span></div>
+                <div><span class="label">Duration:</span> <span id="popup-duration"></span></div>
+                <div><span class="label">Date:</span> <span id="popup-date"></span></div>
+                <div><span class="label">Commit:</span> <code id="popup-commit"></code></div>
+                <div><span class="label">Title:</span> <span id="popup-message"></span></div>
+                <div><span class="label">Author:</span> <span id="popup-author"></span></div>
+                <div><span class="label">Build:</span> <span id="popup-build"></span></div>
+            </div>
+            <div class="popup-links">
+                <a id="popup-github-link" href="#" target="_blank">GitHub Commit</a>
+                <a id="popup-buildkite-link" href="#" target="_blank" class="secondary">Buildkite Job</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="sidebar">
+            <div class="job-matrix" id="job-matrix"></div>
+            <div class="job-list-section">
+                <div class="job-list-header">Jobs (<span id="job-count">0/0</span>)</div>
+                <div class="job-list" id="job-list"></div>
+            </div>
+        </div>
+        <div class="content">
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="timing-chart"></canvas>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Job</th>
+                            <th>Median</th>
+                            <th>Mean</th>
+                            <th>Min</th>
+                            <th>Max</th>
+                            <th>σ</th>
+                            <th>n</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-tbody">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let data = null;
+        let selectedJobs = new Set();
+        let jobColors = {};
+
+        // Buildkite emoji mapping
+        const emojiMap = {
+            ':macos:': '🍎',
+            ':apple:': '🍎',
+            ':linux:': '🐧',
+            ':windows:': '🪟',
+            ':freebsd:': '😈',
+            ':rocket:': '🚀',
+            ':gear:': '⚙️',
+            ':package:': '📦',
+            ':test_tube:': '🧪',
+            ':memo:': '📝',
+            ':lock:': '🔒',
+            ':key:': '🔑',
+            ':warning:': '⚠️',
+            ':x:': '❌',
+            ':white_check_mark:': '✅',
+            ':hourglass:': '⏳',
+            ':zap:': '⚡',
+        };
+
+        function convertEmoji(text) {
+            let result = text;
+            for (const [code, emoji] of Object.entries(emojiMap)) {
+                result = result.replaceAll(code, emoji);
+            }
+            return result;
+        }
+
+        // Generate distinct colors for jobs
+        function generateColors(count) {
+            const colors = [];
+            const hueStep = 360 / count;
+            for (let i = 0; i < count; i++) {
+                const hue = (i * hueStep + 200) % 360; // Start from blue-ish
+                colors.push(`hsl(${hue}, 70%, 55%)`);
+            }
+            return colors;
+        }
+
+        function formatDuration(seconds) {
+            if (seconds < 60) return `${seconds.toFixed(1)}s`;
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(0);
+            if (mins < 60) return `${mins}m ${secs}s`;
+            const hours = Math.floor(mins / 60);
+            const remainMins = mins % 60;
+            return `${hours}h ${remainMins}m`;
+        }
+
+        function classifyJob(name) {
+            const lower = name.toLowerCase();
+            if (lower.includes('juliasyntax')) return { group: 'juliasyntax', type: 'test' };
+            if (lower.includes('launch')) return { group: 'pipeline', type: 'pipeline' };
+            if (lower.includes('unlock')) return { group: 'pipeline', type: 'pipeline' };
+            if (lower.includes('upload test results')) return { group: 'upload-results', type: 'upload' };
+            if (lower.includes('upload docs')) return { group: 'docs', type: 'upload' };
+            if (lower.includes('doctest') || lower.includes('pdf_docs')) return { group: 'docs', type: 'test' };
+
+            // Platform-based grouping
+            if (lower.includes(':linux:') || lower.includes('linux')) {
+                if (lower.includes('build')) return { group: 'linux', type: 'build' };
+                if (lower.includes('test')) return { group: 'linux', type: 'test' };
+                if (lower.includes('upload')) return { group: 'linux', type: 'upload' };
+            }
+            if (lower.includes(':macos:') || lower.includes('macos') || lower.includes('darwin')) {
+                if (lower.includes('build')) return { group: 'macos', type: 'build' };
+                if (lower.includes('test')) return { group: 'macos', type: 'test' };
+                if (lower.includes('upload')) return { group: 'macos', type: 'upload' };
+            }
+            if (lower.includes(':windows:') || lower.includes('windows') || lower.includes('mingw')) {
+                if (lower.includes('build')) return { group: 'windows', type: 'build' };
+                if (lower.includes('test')) return { group: 'windows', type: 'test' };
+                if (lower.includes('upload')) return { group: 'windows', type: 'upload' };
+            }
+            if (lower.includes(':freebsd:') || lower.includes('freebsd')) {
+                if (lower.includes('build')) return { group: 'freebsd', type: 'build' };
+                if (lower.includes('test')) return { group: 'freebsd', type: 'test' };
+                if (lower.includes('upload')) return { group: 'freebsd', type: 'upload' };
+            }
+
+            // Special test types
+            if (['asan', 'tsan', 'analyzegc', 'llvmpasses', 'embedding', 'gcext', 'trimming'].includes(lower)) {
+                return { group: 'special', type: 'test' };
+            }
+            if (lower === 'test revise') return { group: 'special', type: 'test' };
+
+            return { group: 'other', type: 'other' };
+        }
+
+        // Store metadata for chart points
+        let chartMetadata = {};
+
+        function updateChart() {
+            const selectedArray = Array.from(selectedJobs);
+            if (selectedArray.length === 0) {
+                if (chart) chart.destroy();
+                chart = null;
+                chartMetadata = {};
+                return;
+            }
+
+            // Build datasets and metadata
+            const datasets = [];
+            chartMetadata = {};
+
+            for (const jobName of selectedArray) {
+                const jobData = data.jobs[jobName];
+                if (!jobData) continue;
+
+                const color = jobColors[jobName];
+                const points = [];
+
+                for (const run of jobData.recent) {
+                    points.push({
+                        x: new Date(run.date),
+                        y: run.duration,
+                        meta: {
+                            job: jobName,
+                            commit: run.commit,
+                            build: run.build,
+                            date: run.date,
+                            duration: run.duration,
+                            message: run.message,
+                            author: run.author
+                        }
+                    });
+                }
+
+                // Sort by date
+                points.sort((a, b) => a.x - b.x);
+
+                // Build metadata after sorting
+                const datasetIdx = datasets.length;
+                points.forEach((pt, idx) => {
+                    chartMetadata[`${datasetIdx}-${idx}`] = pt.meta;
+                });
+
+                datasets.push({
+                    label: convertEmoji(jobName),
+                    data: points.map(p => ({ x: p.x, y: p.y })),
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    spanGaps: true
+                });
+            }
+
+            if (chart) chart.destroy();
+
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const gridColor = isDark ? '#30363d' : '#d0d7de';
+            const textColor = isDark ? '#8b949e' : '#656d76';
+
+            const ctx = document.getElementById('timing-chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => {
+                                    if (items.length === 0) return '';
+                                    const ctx = items[0];
+                                    const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
+                                    const meta = chartMetadata[key];
+                                    return [ctx.label, meta?.message || ''].filter(Boolean);
+                                },
+                                label: (ctx) => {
+                                    return `${ctx.dataset.label}: ${formatDuration(ctx.parsed.y)}`;
+                                },
+                                labelColor: (ctx) => ({
+                                    borderColor: ctx.dataset.borderColor,
+                                    backgroundColor: ctx.dataset.borderColor
+                                })
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: { day: 'MMM d' }
+                            },
+                            ticks: { color: textColor, maxTicksLimit: 15, maxRotation: 45 },
+                            grid: { color: gridColor }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor,
+                                callback: (v) => formatDuration(v)
+                            },
+                            grid: { color: gridColor }
+                        }
+                    },
+                    onClick: (evt, elements) => {
+                        if (elements.length > 0) {
+                            const el = elements[0];
+                            const key = `${el.datasetIndex}-${el.index}`;
+                            const meta = chartMetadata[key];
+                            if (meta) showPopup(meta);
+                        }
+                    }
+                }
+            });
+        }
+
+        function showPopup(meta) {
+            document.getElementById('popup-job').textContent = convertEmoji(meta.job);
+            document.getElementById('popup-duration').textContent = formatDuration(meta.duration);
+            document.getElementById('popup-date').textContent = meta.date;
+            document.getElementById('popup-commit').textContent = meta.commit;
+            document.getElementById('popup-message').textContent = meta.message || '(no message)';
+            document.getElementById('popup-author').textContent = meta.author || '(unknown)';
+            document.getElementById('popup-build').textContent = `#${meta.build}`;
+
+            document.getElementById('popup-github-link').href =
+                `https://github.com/JuliaLang/julia/commit/${meta.commit}`;
+            document.getElementById('popup-buildkite-link').href =
+                `https://buildkite.com/julialang/julia-master/builds/${meta.build}`;
+
+            document.getElementById('popup-overlay').classList.add('visible');
+        }
+
+        function closePopup(event) {
+            if (event.target.id === 'popup-overlay') {
+                document.getElementById('popup-overlay').classList.remove('visible');
+            }
+        }
+
+        // Close popup on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('popup-overlay').classList.remove('visible');
+            }
+        });
+
+        function updateStatsTable() {
+            const tbody = document.getElementById('stats-tbody');
+            tbody.innerHTML = '';
+
+            const selectedArray = Array.from(selectedJobs).sort((a, b) => {
+                const ma = data.jobs[a]?.stats?.median_seconds ?? 0;
+                const mb = data.jobs[b]?.stats?.median_seconds ?? 0;
+                return mb - ma;
+            });
+
+            if (selectedArray.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">Select jobs to see statistics</td></tr>';
+                return;
+            }
+
+            for (const jobName of selectedArray) {
+                const job = data.jobs[jobName];
+                if (!job) continue;
+                const s = job.stats;
+                const color = jobColors[jobName];
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
+                    <td class="duration">${formatDuration(s.median_seconds)}</td>
+                    <td class="duration">${formatDuration(s.mean_seconds)}</td>
+                    <td class="duration">${formatDuration(s.min_seconds)}</td>
+                    <td class="duration">${formatDuration(s.max_seconds)}</td>
+                    <td class="duration">±${formatDuration(s.std_seconds)}</td>
+                    <td>${s.count}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        function toggleJobItem(item, jobName) {
+            if (selectedJobs.has(jobName)) {
+                selectedJobs.delete(jobName);
+                item.classList.remove('selected');
+            } else {
+                selectedJobs.add(jobName);
+                item.classList.add('selected');
+            }
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function updateToolbarButtons() {
+            const total = Object.keys(data.jobs).length;
+            const selected = selectedJobs.size;
+            document.getElementById('btn-all').classList.toggle('primary', selected === total);
+            document.getElementById('btn-none').classList.toggle('primary', selected === 0);
+        }
+
+        function selectAllJobs() {
+            for (const name of Object.keys(data.jobs)) {
+                selectedJobs.add(name);
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function deselectAllJobs() {
+            selectedJobs.clear();
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        // Matrix organization
+        const platformOrder = ['linux', 'macos', 'windows', 'freebsd'];
+        const typeOrder = ['build', 'test', 'upload'];
+        const platformLabels = {
+            'linux': '🐧 Linux',
+            'macos': '🍎 macOS',
+            'windows': '🪟 Windows',
+            'freebsd': '😈 FreeBSD'
+        };
+        const typeLabels = {
+            'build': 'Build',
+            'test': 'Test',
+            'upload': 'Upload'
+        };
+        const specialGroups = ['juliasyntax', 'docs', 'special', 'pipeline', 'upload-results', 'other'];
+        const specialLabels = {
+            'juliasyntax': '📝 JuliaSyntax',
+            'docs': '📚 Docs',
+            'special': '🔬 Special',
+            'pipeline': '⚙️ Pipeline',
+            'upload-results': '📤 Results',
+            'other': '📦 Other'
+        };
+
+        // Job matrix data: matrix[platform][type] = [jobs]
+        let jobMatrix = {};
+        let specialJobGroups = {};
+
+        function buildJobMatrix() {
+            jobMatrix = {};
+            specialJobGroups = {};
+
+            for (const platform of platformOrder) {
+                jobMatrix[platform] = {};
+                for (const type of typeOrder) {
+                    jobMatrix[platform][type] = [];
+                }
+            }
+            for (const group of specialGroups) {
+                specialJobGroups[group] = [];
+            }
+
+            for (const [name, job] of Object.entries(data.jobs)) {
+                const { group, type } = classifyJob(name);
+                if (platformOrder.includes(group) && typeOrder.includes(type)) {
+                    jobMatrix[group][type].push({ name, job });
+                } else if (specialGroups.includes(group)) {
+                    specialJobGroups[group].push({ name, job });
+                } else {
+                    specialJobGroups['other'].push({ name, job });
+                }
+            }
+        }
+
+        function populateJobSelector() {
+            buildJobMatrix();
+
+            // Assign colors
+            const allJobs = Object.keys(data.jobs);
+            const colors = generateColors(allJobs.length);
+            allJobs.forEach((name, i) => {
+                jobColors[name] = colors[i];
+            });
+
+            // Build matrix table
+            const matrixContainer = document.getElementById('job-matrix');
+            let html = '<table class="matrix-table">';
+
+            // Header row
+            html += '<tr><th class="matrix-corner"></th>';
+            for (const type of typeOrder) {
+                html += `<th class="clickable" onclick="selectByType('${type}')">${typeLabels[type]}</th>`;
+            }
+            html += '</tr>';
+
+            // Platform rows
+            for (const platform of platformOrder) {
+                html += `<tr><th class="row-header clickable" onclick="selectByPlatform('${platform}')">${platformLabels[platform]}</th>`;
+                for (const type of typeOrder) {
+                    const jobs = jobMatrix[platform][type];
+                    const count = jobs.length;
+                    html += `<td class="matrix-cell" data-platform="${platform}" data-type="${type}" onclick="toggleMatrixCell('${platform}', '${type}')">`;
+                    if (count > 0) {
+                        html += `<span class="job-count">${count}</span>`;
+                    } else {
+                        html += '-';
+                    }
+                    html += '</td>';
+                }
+                html += '</tr>';
+            }
+
+            // Special groups row
+            html += '<tr><th class="row-header" colspan="4" style="text-align:center; padding-top:8px;">Special</th></tr>';
+            html += '<tr><td colspan="4" style="padding:0;">';
+            html += '<div style="display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:center;">';
+            for (const group of specialGroups) {
+                const jobs = specialJobGroups[group];
+                if (jobs.length > 0) {
+                    html += `<button class="btn" style="font-size:10px; padding:3px 8px;" data-special="${group}" onclick="toggleSpecialGroup('${group}')">${specialLabels[group]} (${jobs.length})</button>`;
+                }
+            }
+            html += '</div></td></tr>';
+
+            html += '</table>';
+            matrixContainer.innerHTML = html;
+
+            // Build job list
+            const listContainer = document.getElementById('job-list');
+            listContainer.innerHTML = '';
+
+            const allJobsSorted = Object.entries(data.jobs)
+                .map(([name, job]) => ({ name, job }))
+                .sort((a, b) => b.job.stats.median_seconds - a.job.stats.median_seconds);
+
+            for (const { name, job } of allJobsSorted) {
+                const color = jobColors[name];
+                const item = document.createElement('div');
+                item.className = 'job-item selected';
+                item.dataset.job = name;
+                item.onclick = () => toggleJobItem(item, name);
+                item.innerHTML = `
+                    <span class="color-dot" style="background: ${color}"></span>
+                    <span class="job-name">${convertEmoji(name)}</span>
+                    <span class="job-median">${formatDuration(job.stats.median_seconds)}</span>
+                `;
+                listContainer.appendChild(item);
+                selectedJobs.add(name);
+            }
+
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+        }
+
+        function updateMatrixHighlights() {
+            // Update platform/type cells
+            for (const platform of platformOrder) {
+                for (const type of typeOrder) {
+                    const cell = document.querySelector(`.matrix-cell[data-platform="${platform}"][data-type="${type}"]`);
+                    if (!cell) continue;
+                    const jobs = jobMatrix[platform][type];
+                    const selectedCount = jobs.filter(j => selectedJobs.has(j.name)).length;
+                    cell.classList.remove('has-selection', 'partial-selection');
+                    if (selectedCount === jobs.length && jobs.length > 0) {
+                        cell.classList.add('has-selection');
+                    } else if (selectedCount > 0) {
+                        cell.classList.add('partial-selection');
+                    }
+                }
+            }
+
+            // Update special group buttons
+            for (const group of specialGroups) {
+                const btn = document.querySelector(`button[data-special="${group}"]`);
+                if (!btn) continue;
+                const jobs = specialJobGroups[group];
+                const selectedCount = jobs.filter(j => selectedJobs.has(j.name)).length;
+                btn.classList.remove('primary');
+                if (selectedCount === jobs.length && jobs.length > 0) {
+                    btn.classList.add('primary');
+                }
+            }
+        }
+
+        function updateJobCount() {
+            const total = Object.keys(data.jobs).length;
+            document.getElementById('job-count').textContent = `${selectedJobs.size}/${total}`;
+        }
+
+        function toggleMatrixCell(platform, type) {
+            const jobs = jobMatrix[platform][type];
+            if (jobs.length === 0) return;
+
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function selectByPlatform(platform) {
+            const jobs = [];
+            for (const type of typeOrder) {
+                jobs.push(...jobMatrix[platform][type]);
+            }
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function selectByType(type) {
+            const jobs = [];
+            for (const platform of platformOrder) {
+                jobs.push(...jobMatrix[platform][type]);
+            }
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function toggleSpecialGroup(group) {
+            const jobs = specialJobGroups[group];
+            if (jobs.length === 0) return;
+
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function syncJobListUI() {
+            document.querySelectorAll('.job-item').forEach(el => {
+                el.classList.toggle('selected', selectedJobs.has(el.dataset.job));
+            });
+        }
+
+        async function loadData() {
+            try {
+                const resp = await fetch('data/timing_summary.json');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                data = await resp.json();
+
+                document.getElementById('last-updated').textContent =
+                    `Updated: ${data.generated_at}`;
+
+                populateJobSelector();
+            } catch (err) {
+                console.error('Failed to load data:', err);
+                document.getElementById('stats-tbody').innerHTML = `
+                    <tr><td colspan="7" class="error">
+                        Failed to load data. Run <code>julia fetch_timing.jl</code> to generate data.
+                    </td></tr>
+                `;
+            }
+        }
+
+        loadData();
+
+        // Re-render chart when color scheme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (selectedJobs.size > 0) updateChart();
+        });
+    </script>
+</body>
+</html>
