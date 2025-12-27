@@ -6,6 +6,7 @@
     <title>Julia CI Timing</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -487,6 +488,7 @@
         <button class="btn" id="btn-all" onclick="selectAllJobs()" aria-label="Select all jobs">All</button>
         <button class="btn" id="btn-none" onclick="deselectAllJobs()" aria-label="Deselect all jobs">None</button>
         <select class="time-select" id="time-range" onchange="setTimeRange(this.value)" aria-label="Time range">
+            <option value="custom" disabled>Custom</option>
             <option value="7">Last 7 days</option>
             <option value="14">Last 14 days</option>
             <option value="30" selected>Last 30 days</option>
@@ -494,6 +496,7 @@
             <option value="90">Last 90 days</option>
             <option value="0">All time</option>
         </select>
+        <button class="btn" id="btn-reset-zoom" onclick="resetZoom()" aria-label="Reset zoom" style="display: none;">Reset</button>
         <select class="time-select" id="line-type" onchange="setLineType(this.value)" aria-label="Line type">
             <option value="raw">Raw data</option>
             <option value="7" selected>7-day avg</option>
@@ -590,6 +593,11 @@
         let stateFilter = DEFAULT_STATE_FILTER;
         let jobColors = {};
         let chartMetadata = {};
+        // Custom zoom state (null = use timeRangeDays preset)
+        let customXMin = null;  // timestamp or null
+        let customXMax = null;  // timestamp or null
+        let customYMin = null;  // seconds or null
+        let customYMax = null;  // seconds or null
 
         // === Helper Functions ===
         const isFailedState = (state) => FAILED_STATES.includes(state);
@@ -832,11 +840,23 @@
             } else {
                 url.searchParams.delete('s');
             }
-            // Add time range if not default
-            if (timeRangeDays !== DEFAULT_TIME_RANGE) {
+            // Add time range if not default (and not custom zoom)
+            if (customXMin === null && timeRangeDays !== DEFAULT_TIME_RANGE) {
                 url.searchParams.set('t', timeRangeDays);
-            } else {
+            } else if (customXMin === null) {
                 url.searchParams.delete('t');
+            }
+            // Add custom zoom ranges if set
+            if (customXMin !== null) {
+                url.searchParams.set('x', `${customXMin}.${customXMax}`);
+                url.searchParams.delete('t');
+            } else {
+                url.searchParams.delete('x');
+            }
+            if (customYMin !== null) {
+                url.searchParams.set('y', `${customYMin}.${customYMax}`);
+            } else {
+                url.searchParams.delete('y');
             }
             // Add line type if not default
             if (lineType !== 'raw') {
@@ -893,6 +913,28 @@
                 }
             }
 
+            // Apply custom x range (overrides time range)
+            const x = params.get('x');
+            if (x) {
+                const [xMin, xMax] = x.split('.').map(Number);
+                if (!isNaN(xMin) && !isNaN(xMax)) {
+                    customXMin = xMin;
+                    customXMax = xMax;
+                    document.getElementById('time-range').value = 'custom';
+                    document.getElementById('btn-reset-zoom').style.display = '';
+                }
+            }
+
+            // Apply custom y range
+            const y = params.get('y');
+            if (y) {
+                const [yMin, yMax] = y.split('.').map(Number);
+                if (!isNaN(yMin) && !isNaN(yMax)) {
+                    customYMin = yMin;
+                    customYMax = yMax;
+                }
+            }
+
             // Apply line type
             const l = params.get('l');
             if (l !== null && VALID_LINE_TYPES.includes(l)) {
@@ -928,8 +970,49 @@
 
         function setTimeRange(days) {
             timeRangeDays = parseInt(days, 10);
+            // Clear custom zoom when selecting a preset
+            clearCustomZoom();
             updateChart();
             updateStatsTable();
+            updateURL();
+        }
+
+        function clearCustomZoom() {
+            customXMin = null;
+            customXMax = null;
+            customYMin = null;
+            customYMax = null;
+            const select = document.getElementById('time-range');
+            select.value = timeRangeDays;
+            document.getElementById('btn-reset-zoom').style.display = 'none';
+        }
+
+        function setCustomZoom(xMin, xMax, yMin, yMax) {
+            customXMin = xMin;
+            customXMax = xMax;
+            customYMin = yMin;
+            customYMax = yMax;
+            // Update dropdown to show "Custom"
+            const select = document.getElementById('time-range');
+            select.value = 'custom';
+            document.getElementById('btn-reset-zoom').style.display = '';
+            updateURL();
+        }
+
+        function handleZoomPanComplete({ chart }) {
+            const xAxis = chart.scales.x;
+            const yAxis = chart.scales.y;
+            setCustomZoom(
+                Math.round(xAxis.min),
+                Math.round(xAxis.max),
+                Math.round(yAxis.min),
+                Math.round(yAxis.max)
+            );
+        }
+
+        function resetZoom() {
+            clearCustomZoom();
+            updateChart();
             updateURL();
         }
 
@@ -1127,7 +1210,7 @@
                         fill: false,
                         tension: 0.2,
                         pointRadius: pointRadii,
-                        pointHoverRadius: 6,
+                        pointHoverRadius: 3,
                         pointBackgroundColor: color,
                         pointBorderColor: color,
                         pointStyle: pointStyles,
@@ -1157,7 +1240,7 @@
                         fill: false,
                         showLine: false,
                         pointRadius: pointRadii,
-                        pointHoverRadius: 6,
+                        pointHoverRadius: 3,
                         pointStyle: pointStyles,
                         pointBorderColor: color,
                         pointBackgroundColor: color
@@ -1185,11 +1268,33 @@
                     animation: false,
                     interaction: {
                         mode: 'nearest',
-                        intersect: false
+                        intersect: true
                     },
                     plugins: {
                         legend: {
                             display: false
+                        },
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'xy',
+                                modifierKey: null,
+                                onPanComplete: handleZoomPanComplete
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    modifierKey: null
+                                },
+                                drag: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(9, 105, 218, 0.2)',
+                                    borderColor: 'rgba(9, 105, 218, 0.8)',
+                                    borderWidth: 1
+                                },
+                                mode: 'xy',
+                                onZoomComplete: handleZoomPanComplete
+                            }
                         },
                         tooltip: {
                             borderWidth: 3,
@@ -1248,6 +1353,8 @@
                     scales: {
                         x: {
                             type: 'time',
+                            min: customXMin || undefined,
+                            max: customXMax || undefined,
                             time: {
                                 displayFormats: {
                                     day: 'MMM d',
@@ -1299,6 +1406,8 @@
                             }
                         },
                         y: {
+                            min: customYMin || undefined,
+                            max: customYMax || undefined,
                             ticks: {
                                 color: textColor,
                                 callback: (v) => formatDuration(v),
