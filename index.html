@@ -371,6 +371,91 @@
             font-size: 18px;
             cursor: pointer;
         }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            html, body { overflow: auto; }
+            body { height: auto; min-height: 100vh; }
+
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 8px 12px;
+            }
+            .toolbar h1 {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 4px;
+                font-size: 14px;
+            }
+            .toolbar .updated {
+                width: 100%;
+                margin-left: 0;
+                order: 10;
+            }
+            .btn, .time-select {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .main {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--color-border-default);
+                max-height: none;
+            }
+
+            .job-matrix {
+                padding: 8px;
+                overflow-x: auto;
+            }
+            .matrix-table {
+                font-size: 10px;
+            }
+            .matrix-table th, .matrix-table td {
+                padding: 3px 4px;
+            }
+            .matrix-cell {
+                min-width: 40px;
+            }
+
+            .job-list-section {
+                max-height: 150px;
+            }
+
+            .content {
+                min-height: 400px;
+            }
+
+            .chart-container {
+                min-height: 300px;
+                padding: 8px;
+            }
+            .chart-wrapper {
+                position: relative;
+                top: 0; left: 0; right: 0; bottom: 0;
+                height: 280px;
+            }
+
+            .stats-bar {
+                max-height: none;
+            }
+            .stats-bar th, .stats-bar td {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+
+            .popup {
+                margin: 16px;
+                min-width: auto;
+                max-width: calc(100vw - 32px);
+            }
+        }
     </style>
 </head>
 <body>
