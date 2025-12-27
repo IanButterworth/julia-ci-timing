@@ -859,7 +859,7 @@
         }
 
         function showPopup(meta) {
-            document.getElementById('popup-job').textContent = convertEmoji(meta.job);
+            document.getElementById('popup-job').innerHTML = convertEmoji(meta.job);
             document.getElementById('popup-duration').textContent = formatDuration(meta.duration);
             document.getElementById('popup-date').textContent = meta.date;
             document.getElementById('popup-commit').textContent = meta.commit;
@@ -869,8 +869,11 @@
 
             document.getElementById('popup-github-link').href =
                 `https://github.com/JuliaLang/julia/commit/${meta.commit}`;
+
+            // Coverage jobs are in julia-master-scheduled pipeline
+            const pipeline = meta.job.toLowerCase().includes('coverage') ? 'julia-master-scheduled' : 'julia-master';
             document.getElementById('popup-buildkite-link').href =
-                `https://buildkite.com/julialang/julia-master/builds/${meta.build}`;
+                `https://buildkite.com/julialang/${pipeline}/builds/${meta.build}`;
 
             document.getElementById('popup-overlay').classList.add('visible');
         }
