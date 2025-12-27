@@ -67352,6 +67352,650 @@
                 "count": 105
             }
         },
+        "juliasyntax macos/x86_64/1.6": {
+            "recent": [
+                {
+                    "duration": 953,
+                    "build": 52985,
+                    "author": "Cody Tapscott",
+                    "commit": "571fa800",
+                    "message": "Document and further clean up node creation functions (#60431)",
+                    "date": "2025-12-26 17:19"
+                },
+                {
+                    "duration": 136,
+                    "build": 52976,
+                    "author": "Keno Fischer",
+                    "commit": "f467548a",
+                    "message": "syntax-versioning: Define behavior in scripts and REPL (#60400)",
+                    "date": "2025-12-25 17:54"
+                },
+                {
+                    "duration": 130,
+                    "build": 52973,
+                    "author": "Ian Butterworth",
+                    "commit": "b6337dd7",
+                    "message": "REPL: fix completion overwriting input after cursor (#60472)",
+                    "date": "2025-12-25 11:55"
+                },
+                {
+                    "duration": 133,
+                    "build": 52971,
+                    "author": "Viral Shah",
+                    "commit": "f2608a49",
+                    "message": "Docs: mention cmd line option for App Installer on Windows (#60464)",
+                    "date": "2025-12-25 09:53"
+                },
+                {
+                    "duration": 132,
+                    "build": 52970,
+                    "author": "Ian Butterworth",
+                    "commit": "0254afcf",
+                    "message": "define generic `in` in terms of `any` (#55669)",
+                    "date": "2025-12-25 02:49"
+                },
+                {
+                    "duration": 127,
+                    "build": 52969,
+                    "author": "Oscar Smith",
+                    "commit": "6e24bafc",
+                    "message": "reduce allocations for string(::IEEEFloat) (#57977)",
+                    "date": "2025-12-25 02:48"
+                },
+                {
+                    "duration": 132,
+                    "build": 52962,
+                    "author": "Cody Tapscott",
+                    "commit": "c711544f",
+                    "message": "Don't make graph type abstract in SyntaxTree (#60430)",
+                    "date": "2025-12-24 19:41"
+                },
+                {
+                    "duration": 134,
+                    "build": 52957,
+                    "author": "Andy Dienes",
+                    "commit": "bcf3fafa",
+                    "message": "use `_string_n` instead of `StringMemory` to reduce allocations for a few `st...",
+                    "date": "2025-12-24 19:16"
+                },
+                {
+                    "duration": 122,
+                    "build": 52946,
+                    "author": "Max Horn",
+                    "commit": "8517fdfa",
+                    "message": "Fix JET warning in Base.sendfile (#60466)",
+                    "date": "2025-12-24 07:24"
+                },
+                {
+                    "duration": 131,
+                    "build": 52945,
+                    "author": "Max Horn",
+                    "commit": "8afae37a",
+                    "message": "Fix JET warning in `TOML.parse_array` (#60465)",
+                    "date": "2025-12-24 07:23"
+                },
+                {
+                    "duration": 130,
+                    "build": 52942,
+                    "author": "Cody Tapscott",
+                    "commit": "8a7223ef",
+                    "message": "[Windows] Use `TimerQueue` API to register Profile watchdog (#60463)",
+                    "date": "2025-12-24 00:17"
+                },
+                {
+                    "duration": 132,
+                    "build": 52939,
+                    "author": "Ian Butterworth",
+                    "commit": "3690b1e0",
+                    "message": "Print `full_name` after precompiling extension (#60456)",
+                    "date": "2025-12-23 22:14"
+                },
+                {
+                    "duration": 131,
+                    "build": 52901,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "b7a217c5",
+                    "message": "[JuliaLowering] fix `@nospecialize` on unnamed arguments (#60432)",
+                    "date": "2025-12-22 18:47"
+                },
+                {
+                    "duration": 126,
+                    "build": 52896,
+                    "author": "Viral Shah",
+                    "commit": "49bc3252",
+                    "message": "Improve contributor onboarding visibility in README (#60443)",
+                    "date": "2025-12-22 13:30"
+                },
+                {
+                    "duration": 132,
+                    "build": 52893,
+                    "author": "Lilith Hafner",
+                    "commit": "e6b29ad9",
+                    "message": "Add support for optionally printing unsigned integers as decimals (#60267)",
+                    "date": "2025-12-21 23:54"
+                },
+                {
+                    "duration": 132,
+                    "build": 52887,
+                    "author": "Andy Dienes",
+                    "commit": "a32911ae",
+                    "message": "Remove unnecessary masking when converting from Bool (#60435)",
+                    "date": "2025-12-20 13:52"
+                },
+                {
+                    "duration": 138,
+                    "build": 52860,
+                    "author": "Mosè Giordano",
+                    "commit": "d9879e3b",
+                    "message": "Fix Makefile typo of USE_SYSTEM_ZSTD (#60422)",
+                    "date": "2025-12-19 07:09"
+                },
+                {
+                    "duration": 131,
+                    "build": 52846,
+                    "author": "Cody Tapscott",
+                    "commit": "3b1a5b6c",
+                    "message": "[JuliaLowering] Miscellaneous fixes for `SparseArrays` precompilation (#60411)",
+                    "date": "2025-12-18 18:53"
+                },
+                {
+                    "duration": 134,
+                    "build": 52843,
+                    "author": "Max Horn",
+                    "commit": "3b21c7f6",
+                    "message": "Fix world age docs link, point to correct manual version (#60384)",
+                    "date": "2025-12-18 16:29"
+                },
+                {
+                    "duration": 125,
+                    "build": 52835,
+                    "author": "Kristoffer Carlsson",
+                    "commit": "b34261b5",
+                    "message": "JuliaSyntax:force specialize on function in `parse_brackets` (#60403)",
+                    "date": "2025-12-17 17:56"
+                },
+                {
+                    "duration": 137,
+                    "build": 52833,
+                    "author": "Jameson Nash",
+                    "commit": "fadb1592",
+                    "message": "codegen: improve codegen size layout of on-stack format for pointer-ful types...",
+                    "date": "2025-12-17 15:22"
+                },
+                {
+                    "duration": 124,
+                    "build": 52820,
+                    "author": "Cody Tapscott",
+                    "commit": "1cff1301",
+                    "message": "`Expr`/`SyntaxTree` parity: trivial conversions (#60373)",
+                    "date": "2025-12-16 23:39"
+                },
+                {
+                    "duration": 125,
+                    "build": 52804,
+                    "author": "Alex Arslan",
+                    "commit": "6d944d15",
+                    "message": "Fix `membarrier` usage on FreeBSD (#60389)",
+                    "date": "2025-12-16 12:02"
+                },
+                {
+                    "duration": 127,
+                    "build": 52801,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "893635dc",
+                    "message": "REPLCompletions: Add some more keywords to completion list (#60380)",
+                    "date": "2025-12-16 08:28"
+                },
+                {
+                    "duration": 131,
+                    "build": 52772,
+                    "author": "Ian Butterworth",
+                    "commit": "d2cbb4e3",
+                    "message": "🤖 Bump Pkg stdlib 1e90f07f9 → 61e074274 (#60382)",
+                    "date": "2025-12-15 08:05"
+                },
+                {
+                    "duration": 129,
+                    "build": 52738,
+                    "author": "Jeff Bezanson",
+                    "commit": "4f94b1d6",
+                    "message": "apply 1.13 news edits to history (#60360)",
+                    "date": "2025-12-12 19:35"
+                },
+                {
+                    "duration": 129,
+                    "build": 52676,
+                    "author": "Cody Tapscott",
+                    "commit": "42d461aa",
+                    "message": "[JuliaLowering] Refactor scope resolution pass (#60316)",
+                    "date": "2025-12-11 18:05"
+                },
+                {
+                    "duration": 136,
+                    "build": 52647,
+                    "author": "Jeff Bezanson",
+                    "commit": "cd42334a",
+                    "message": "Include missing sub- and superscripts in operator suffix list (#60285)",
+                    "date": "2025-12-10 21:45"
+                },
+                {
+                    "duration": 125,
+                    "build": 52633,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "3efd5e7c",
+                    "message": "Proactively compile lambdas when the type of the closure is known (#60259)",
+                    "date": "2025-12-09 19:17"
+                },
+                {
+                    "duration": 124,
+                    "build": 52620,
+                    "author": "Cody Tapscott",
+                    "commit": "2264f502",
+                    "message": "codegen: implement `sret_union` ABI for pointer-ful types (#55045)",
+                    "date": "2025-12-08 16:29"
+                },
+                {
+                    "duration": 137,
+                    "build": 52607,
+                    "author": "Jameson Nash",
+                    "commit": "8fd607a7",
+                    "message": "signals: Implement fake_stack_pop for Linux on x86_64 and i686 (#60013)",
+                    "date": "2025-12-06 19:33"
+                },
+                {
+                    "duration": 129,
+                    "build": 52605,
+                    "author": "Ian Butterworth",
+                    "commit": "18aa2377",
+                    "message": "Don't create a subprocess in the REPL precompile script (#60326)",
+                    "date": "2025-12-06 13:59"
+                },
+                {
+                    "duration": 136,
+                    "build": 52603,
+                    "author": "Mosè Giordano",
+                    "commit": "39a234f2",
+                    "message": "Don't delete input `expmap` files (#60329)",
+                    "date": "2025-12-06 09:59"
+                },
+                {
+                    "duration": 130,
+                    "build": 52521,
+                    "author": "Cody Tapscott",
+                    "commit": "296cca23",
+                    "message": "Bypass `SyntaxNode` in JuliaLowering; fix `kw` bug (#60162)",
+                    "date": "2025-12-02 23:51"
+                },
+                {
+                    "duration": 125,
+                    "build": 52518,
+                    "author": "Andy Dienes",
+                    "commit": "97d9feda",
+                    "message": "Madvise Transparent Huge Pages for large allocations (#59858)",
+                    "date": "2025-12-02 21:40"
+                },
+                {
+                    "duration": 130,
+                    "build": 52509,
+                    "author": "Cody Tapscott",
+                    "commit": "442e8d4e",
+                    "message": "Add `test-JuliaLowering_stdlibs` target for precompiling stdlibs with JuliaLo...",
+                    "date": "2025-12-02 18:27"
+                },
+                {
+                    "duration": 125,
+                    "build": 52505,
+                    "author": "Valentin Churavy",
+                    "commit": "841148d8",
+                    "message": "Fix buffer overflow in jloptions (#60299)",
+                    "date": "2025-12-02 17:32"
+                },
+                {
+                    "duration": 125,
+                    "build": 52492,
+                    "author": "Gabriel Baraldi",
+                    "commit": "9bb86842",
+                    "message": "Relax timing restriction in pidfile test (#60288)",
+                    "date": "2025-12-02 12:01"
+                },
+                {
+                    "duration": 138,
+                    "build": 52490,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "231c9e03",
+                    "message": "Fix copy-paste error in effect comparison (#60297)",
+                    "date": "2025-12-02 09:49"
+                },
+                {
+                    "duration": 135,
+                    "build": 52484,
+                    "author": "Keno Fischer",
+                    "commit": "79b8e456",
+                    "message": "bootstrap: remove duplicated constructor definition warning (#60290)",
+                    "date": "2025-12-02 00:33"
+                },
+                {
+                    "duration": 132,
+                    "build": 52480,
+                    "author": "Cody Tapscott",
+                    "commit": "7a642411",
+                    "message": "[JuliaLowering] `ccall((lib,sym)...)` and `cfunction` fixes (#60257)",
+                    "date": "2025-12-01 22:15"
+                },
+                {
+                    "duration": 139,
+                    "build": 52474,
+                    "author": "Cody Tapscott",
+                    "commit": "68553c58",
+                    "message": "[JuliaLowering] Restrict `K\"VERSION\"` to module arg (#60255)",
+                    "date": "2025-12-01 21:03"
+                },
+                {
+                    "duration": 132,
+                    "build": 52452,
+                    "author": "",
+                    "commit": "adb12cc4",
+                    "message": "Bump actions/checkout from 5.0.0 to 6.0.0 (#60287)",
+                    "date": "2025-12-01 11:48"
+                },
+                {
+                    "duration": 125,
+                    "build": 52447,
+                    "author": "Diogo Correia Netto",
+                    "commit": "c606193e",
+                    "message": "fix indentation in a GC function (#60283)",
+                    "date": "2025-11-30 17:24"
+                },
+                {
+                    "duration": 133,
+                    "build": 52433,
+                    "author": "Mosè Giordano",
+                    "commit": "1067db80",
+                    "message": "Correct version in which at-lock was exported (#60279)",
+                    "date": "2025-11-29 08:00"
+                },
+                {
+                    "duration": 131,
+                    "build": 52430,
+                    "author": "Ian Butterworth",
+                    "commit": "d0060e7f",
+                    "message": "Add propagate_inbounds to some SubString operations (#59615)",
+                    "date": "2025-11-29 06:18"
+                },
+                {
+                    "duration": 124,
+                    "build": 52429,
+                    "author": "Ian Butterworth",
+                    "commit": "cb8734a8",
+                    "message": "🤖 Bump LinearAlgebra stdlib 7e11b5e → b599095 (#60209)",
+                    "date": "2025-11-29 05:38"
+                },
+                {
+                    "duration": 130,
+                    "build": 52428,
+                    "author": "Ian Butterworth",
+                    "commit": "eeeafedb",
+                    "message": "🤖 Bump Tar stdlib 9dd8ed1 → d236fa0 (#60238)",
+                    "date": "2025-11-29 05:37"
+                },
+                {
+                    "duration": 124,
+                    "build": 52424,
+                    "author": "Diogo Correia Netto",
+                    "commit": "0c216396",
+                    "message": "NFC: tidy up the stock GC codebase (part 1) (#60278)",
+                    "date": "2025-11-29 02:56"
+                },
+                {
+                    "duration": 131,
+                    "build": 52410,
+                    "author": "Keno Fischer",
+                    "commit": "1dab497f",
+                    "message": "Define inference lattice types in boot.jl rather than jltypes (#60269)",
+                    "date": "2025-11-28 18:31"
+                },
+                {
+                    "duration": 134,
+                    "build": 52404,
+                    "author": "Ian Butterworth",
+                    "commit": "77d2ffb2",
+                    "message": "🤖 Bump NetworkOptions stdlib 46e14ef → 7034c55 (#60210)",
+                    "date": "2025-11-28 17:38"
+                },
+                {
+                    "duration": 125,
+                    "build": 52403,
+                    "author": "Diogo Correia Netto",
+                    "commit": "8efd1f08",
+                    "message": "Enhance GC devdocs (#60256)",
+                    "date": "2025-11-28 16:16"
+                },
+                {
+                    "duration": 136,
+                    "build": 52381,
+                    "author": "Cody Tapscott",
+                    "commit": "f36882f7",
+                    "message": "Remove libjulia-internal.so dependency on libstdc++ and libgcc (#60248)",
+                    "date": "2025-11-27 01:27"
+                },
+                {
+                    "duration": 129,
+                    "build": 52348,
+                    "author": "",
+                    "commit": "24d8ab52",
+                    "message": "MersenneTwister: clean up constructors (#60185)",
+                    "date": "2025-11-26 15:51"
+                },
+                {
+                    "duration": 129,
+                    "build": 52347,
+                    "author": "Jishnu Bhattacharya",
+                    "commit": "ee6bb20b",
+                    "message": "Fix linearly indexed array math by reshaping arrays (#60164)",
+                    "date": "2025-11-26 14:56"
+                },
+                {
+                    "duration": 136,
+                    "build": 52339,
+                    "author": "Jeff Bezanson",
+                    "commit": "a63cca87",
+                    "message": "Don't introduce a block around `y` in parsing `x' = y` (#60246)",
+                    "date": "2025-11-25 23:20"
+                },
+                {
+                    "duration": 128,
+                    "build": 52338,
+                    "author": "Keno Fischer",
+                    "commit": "3484331c",
+                    "message": "Provide mechanism for Julia syntax evolution (#60018)",
+                    "date": "2025-11-25 23:14"
+                },
+                {
+                    "duration": 135,
+                    "build": 52330,
+                    "author": "Cody Tapscott",
+                    "commit": "b328306f",
+                    "message": "Makefile: add `clean-utf8proc` to `make cleanall` (#60244)",
+                    "date": "2025-11-25 18:33"
+                },
+                {
+                    "duration": 133,
+                    "build": 52326,
+                    "author": "Keno Fischer",
+                    "commit": "a4d2b6a3",
+                    "message": "🤖 Bump Pkg stdlib 2141bf17f → 1e90f07f9 (#60237)",
+                    "date": "2025-11-25 16:28"
+                },
+                {
+                    "duration": 123,
+                    "build": 52321,
+                    "author": "Cody Tapscott",
+                    "commit": "4eab2f7b",
+                    "message": "[JuliaLowering] Fix generated functions when `expr_compat_mode=true` (#60233)",
+                    "date": "2025-11-25 12:34"
+                },
+                {
+                    "duration": 132,
+                    "build": 52309,
+                    "author": "Viral Shah",
+                    "commit": "99936fef",
+                    "message": "Fix link to manual downloads page in README (#60236)",
+                    "date": "2025-11-25 05:24"
+                },
+                {
+                    "duration": 133,
+                    "build": 52305,
+                    "author": "Viral Shah",
+                    "commit": "fff2cfc9",
+                    "message": "Update Julia version in README to v1.12.2 (#60234)",
+                    "date": "2025-11-25 05:13"
+                },
+                {
+                    "duration": 132,
+                    "build": 52298,
+                    "author": "Cody Tapscott",
+                    "commit": "802f1dff",
+                    "message": "[JuliaLowering] Fix handling of unnamed args in `@generated` functions (#60226)",
+                    "date": "2025-11-24 23:23"
+                },
+                {
+                    "duration": 131,
+                    "build": 52285,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "da57d866",
+                    "message": "inference: fix the ptrfree field check (#60214)",
+                    "date": "2025-11-24 18:22"
+                },
+                {
+                    "duration": 130,
+                    "build": 52282,
+                    "author": "Max Horn",
+                    "commit": "ae42e5fe",
+                    "message": "Bump Documenter to 1.16.1 (#60215)",
+                    "date": "2025-11-24 17:10"
+                },
+                {
+                    "duration": 140,
+                    "build": 52268,
+                    "author": "Oscar Smith",
+                    "commit": "fd419bd9",
+                    "message": "make codepoint(c) work for overlong chars (#55152)",
+                    "date": "2025-11-23 16:30"
+                },
+                {
+                    "duration": 136,
+                    "build": 52267,
+                    "author": "Max Horn",
+                    "commit": "21f3b37a",
+                    "message": "Replace some uses of `Array` by `Vector` or `Matrix` (#60154)",
+                    "date": "2025-11-23 15:47"
+                },
+                {
+                    "duration": 122,
+                    "build": 52245,
+                    "author": "Keno Fischer",
+                    "commit": "363d45c3",
+                    "message": "Reject decimal points after hex float literals (#60199)",
+                    "date": "2025-11-22 04:19"
+                },
+                {
+                    "duration": 129,
+                    "build": 52242,
+                    "author": "Mosè Giordano",
+                    "commit": "ddf1b02c",
+                    "message": "Revert \"Add JLJITLinkMemoryManager (ports memory manager to JITLink)\" (#60196)",
+                    "date": "2025-11-22 01:20"
+                },
+                {
+                    "duration": 131,
+                    "build": 52223,
+                    "author": "Max Horn",
+                    "commit": "9af9b158",
+                    "message": "Better order for stdlibs in the Julia manual navbar (#60155)",
+                    "date": "2025-11-21 11:09"
+                },
+                {
+                    "duration": 137,
+                    "build": 52214,
+                    "author": "Sam Schweigel",
+                    "commit": "9f1cc447",
+                    "message": "Use uint64_t for debuginfo address differences/slide (#60179)",
+                    "date": "2025-11-20 17:22"
+                },
+                {
+                    "duration": 131,
+                    "build": 52200,
+                    "author": "Cody Tapscott",
+                    "commit": "46f6c6d1",
+                    "message": "[JuliaLowering] Fix-up `__module__` in macro expansion (#60174)",
+                    "date": "2025-11-19 21:05"
+                },
+                {
+                    "duration": 136,
+                    "build": 52199,
+                    "author": "Cody Tapscott",
+                    "commit": "b1afe036",
+                    "message": "Add uninitialized multi-versioning trampoline for autoinit support (#60171)",
+                    "date": "2025-11-19 20:17"
+                },
+                {
+                    "duration": 132,
+                    "build": 52197,
+                    "author": "",
+                    "commit": "eba48a25",
+                    "message": "Disable the Profile test for the Windows SuspendThread deadlock (#60175)",
+                    "date": "2025-11-19 19:29"
+                },
+                {
+                    "duration": 129,
+                    "build": 52175,
+                    "author": "Sam Schweigel",
+                    "commit": "cd2dc914",
+                    "message": "Use -force_load, rather than -all_load, on ld64 (macOS) (#60160)",
+                    "date": "2025-11-18 23:52"
+                },
+                {
+                    "duration": 126,
+                    "build": 52161,
+                    "author": "Em Chu",
+                    "commit": "625e8c7d",
+                    "message": "[JuliaLowering] Fix placeholders in parameters and decls, work around `hasmet...",
+                    "date": "2025-11-18 17:40"
+                },
+                {
+                    "duration": 138,
+                    "build": 52136,
+                    "author": "Keno Fischer",
+                    "commit": "4060c45d",
+                    "message": "loading: rm no-op conditional in cache rejection (#60150)",
+                    "date": "2025-11-17 13:51"
+                },
+                {
+                    "duration": 127,
+                    "build": 52122,
+                    "author": "Keno Fischer",
+                    "commit": "89243d1c",
+                    "message": "Fix embedding with MSVC (#60142)",
+                    "date": "2025-11-15 20:47"
+                },
+                {
+                    "duration": 132,
+                    "build": 52106,
+                    "author": "Diogo Correia Netto",
+                    "commit": "6a55e524",
+                    "message": "document metrics from GC_Num; rename one metric from GC_Num to match the name...",
+                    "date": "2025-11-14 22:33"
+                }
+            ],
+            "stats": {
+                "min_seconds": 122,
+                "std_seconds": 92.6,
+                "max_seconds": 953,
+                "mean_seconds": 141.2,
+                "median_seconds": 131,
+                "count": 79
+            }
+        },
         ":linux: test x86_64-linux-gnu": {
             "recent": [
                 {
@@ -68202,6 +68846,650 @@
                 "mean_seconds": 3955.6,
                 "median_seconds": 3973,
                 "count": 105
+            }
+        },
+        "juliasyntax linux/x86_64/1.0": {
+            "recent": [
+                {
+                    "duration": 212,
+                    "build": 52985,
+                    "author": "Cody Tapscott",
+                    "commit": "571fa800",
+                    "message": "Document and further clean up node creation functions (#60431)",
+                    "date": "2025-12-26 17:19"
+                },
+                {
+                    "duration": 176,
+                    "build": 52976,
+                    "author": "Keno Fischer",
+                    "commit": "f467548a",
+                    "message": "syntax-versioning: Define behavior in scripts and REPL (#60400)",
+                    "date": "2025-12-25 17:54"
+                },
+                {
+                    "duration": 206,
+                    "build": 52973,
+                    "author": "Ian Butterworth",
+                    "commit": "b6337dd7",
+                    "message": "REPL: fix completion overwriting input after cursor (#60472)",
+                    "date": "2025-12-25 11:55"
+                },
+                {
+                    "duration": 210,
+                    "build": 52971,
+                    "author": "Viral Shah",
+                    "commit": "f2608a49",
+                    "message": "Docs: mention cmd line option for App Installer on Windows (#60464)",
+                    "date": "2025-12-25 09:53"
+                },
+                {
+                    "duration": 163,
+                    "build": 52970,
+                    "author": "Ian Butterworth",
+                    "commit": "0254afcf",
+                    "message": "define generic `in` in terms of `any` (#55669)",
+                    "date": "2025-12-25 02:49"
+                },
+                {
+                    "duration": 182,
+                    "build": 52969,
+                    "author": "Oscar Smith",
+                    "commit": "6e24bafc",
+                    "message": "reduce allocations for string(::IEEEFloat) (#57977)",
+                    "date": "2025-12-25 02:48"
+                },
+                {
+                    "duration": 163,
+                    "build": 52962,
+                    "author": "Cody Tapscott",
+                    "commit": "c711544f",
+                    "message": "Don't make graph type abstract in SyntaxTree (#60430)",
+                    "date": "2025-12-24 19:41"
+                },
+                {
+                    "duration": 185,
+                    "build": 52957,
+                    "author": "Andy Dienes",
+                    "commit": "bcf3fafa",
+                    "message": "use `_string_n` instead of `StringMemory` to reduce allocations for a few `st...",
+                    "date": "2025-12-24 19:16"
+                },
+                {
+                    "duration": 182,
+                    "build": 52946,
+                    "author": "Max Horn",
+                    "commit": "8517fdfa",
+                    "message": "Fix JET warning in Base.sendfile (#60466)",
+                    "date": "2025-12-24 07:24"
+                },
+                {
+                    "duration": 182,
+                    "build": 52945,
+                    "author": "Max Horn",
+                    "commit": "8afae37a",
+                    "message": "Fix JET warning in `TOML.parse_array` (#60465)",
+                    "date": "2025-12-24 07:23"
+                },
+                {
+                    "duration": 217,
+                    "build": 52942,
+                    "author": "Cody Tapscott",
+                    "commit": "8a7223ef",
+                    "message": "[Windows] Use `TimerQueue` API to register Profile watchdog (#60463)",
+                    "date": "2025-12-24 00:17"
+                },
+                {
+                    "duration": 175,
+                    "build": 52939,
+                    "author": "Ian Butterworth",
+                    "commit": "3690b1e0",
+                    "message": "Print `full_name` after precompiling extension (#60456)",
+                    "date": "2025-12-23 22:14"
+                },
+                {
+                    "duration": 243,
+                    "build": 52901,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "b7a217c5",
+                    "message": "[JuliaLowering] fix `@nospecialize` on unnamed arguments (#60432)",
+                    "date": "2025-12-22 18:47"
+                },
+                {
+                    "duration": 220,
+                    "build": 52896,
+                    "author": "Viral Shah",
+                    "commit": "49bc3252",
+                    "message": "Improve contributor onboarding visibility in README (#60443)",
+                    "date": "2025-12-22 13:30"
+                },
+                {
+                    "duration": 220,
+                    "build": 52893,
+                    "author": "Lilith Hafner",
+                    "commit": "e6b29ad9",
+                    "message": "Add support for optionally printing unsigned integers as decimals (#60267)",
+                    "date": "2025-12-21 23:54"
+                },
+                {
+                    "duration": 210,
+                    "build": 52887,
+                    "author": "Andy Dienes",
+                    "commit": "a32911ae",
+                    "message": "Remove unnecessary masking when converting from Bool (#60435)",
+                    "date": "2025-12-20 13:52"
+                },
+                {
+                    "duration": 219,
+                    "build": 52860,
+                    "author": "Mosè Giordano",
+                    "commit": "d9879e3b",
+                    "message": "Fix Makefile typo of USE_SYSTEM_ZSTD (#60422)",
+                    "date": "2025-12-19 07:09"
+                },
+                {
+                    "duration": 172,
+                    "build": 52846,
+                    "author": "Cody Tapscott",
+                    "commit": "3b1a5b6c",
+                    "message": "[JuliaLowering] Miscellaneous fixes for `SparseArrays` precompilation (#60411)",
+                    "date": "2025-12-18 18:53"
+                },
+                {
+                    "duration": 173,
+                    "build": 52843,
+                    "author": "Max Horn",
+                    "commit": "3b21c7f6",
+                    "message": "Fix world age docs link, point to correct manual version (#60384)",
+                    "date": "2025-12-18 16:29"
+                },
+                {
+                    "duration": 220,
+                    "build": 52835,
+                    "author": "Kristoffer Carlsson",
+                    "commit": "b34261b5",
+                    "message": "JuliaSyntax:force specialize on function in `parse_brackets` (#60403)",
+                    "date": "2025-12-17 17:56"
+                },
+                {
+                    "duration": 195,
+                    "build": 52833,
+                    "author": "Jameson Nash",
+                    "commit": "fadb1592",
+                    "message": "codegen: improve codegen size layout of on-stack format for pointer-ful types...",
+                    "date": "2025-12-17 15:22"
+                },
+                {
+                    "duration": 211,
+                    "build": 52820,
+                    "author": "Cody Tapscott",
+                    "commit": "1cff1301",
+                    "message": "`Expr`/`SyntaxTree` parity: trivial conversions (#60373)",
+                    "date": "2025-12-16 23:39"
+                },
+                {
+                    "duration": 232,
+                    "build": 52804,
+                    "author": "Alex Arslan",
+                    "commit": "6d944d15",
+                    "message": "Fix `membarrier` usage on FreeBSD (#60389)",
+                    "date": "2025-12-16 12:02"
+                },
+                {
+                    "duration": 185,
+                    "build": 52801,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "893635dc",
+                    "message": "REPLCompletions: Add some more keywords to completion list (#60380)",
+                    "date": "2025-12-16 08:28"
+                },
+                {
+                    "duration": 164,
+                    "build": 52772,
+                    "author": "Ian Butterworth",
+                    "commit": "d2cbb4e3",
+                    "message": "🤖 Bump Pkg stdlib 1e90f07f9 → 61e074274 (#60382)",
+                    "date": "2025-12-15 08:05"
+                },
+                {
+                    "duration": 221,
+                    "build": 52738,
+                    "author": "Jeff Bezanson",
+                    "commit": "4f94b1d6",
+                    "message": "apply 1.13 news edits to history (#60360)",
+                    "date": "2025-12-12 19:35"
+                },
+                {
+                    "duration": 253,
+                    "build": 52676,
+                    "author": "Cody Tapscott",
+                    "commit": "42d461aa",
+                    "message": "[JuliaLowering] Refactor scope resolution pass (#60316)",
+                    "date": "2025-12-11 18:05"
+                },
+                {
+                    "duration": 213,
+                    "build": 52647,
+                    "author": "Jeff Bezanson",
+                    "commit": "cd42334a",
+                    "message": "Include missing sub- and superscripts in operator suffix list (#60285)",
+                    "date": "2025-12-10 21:45"
+                },
+                {
+                    "duration": 213,
+                    "build": 52633,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "3efd5e7c",
+                    "message": "Proactively compile lambdas when the type of the closure is known (#60259)",
+                    "date": "2025-12-09 19:17"
+                },
+                {
+                    "duration": 168,
+                    "build": 52620,
+                    "author": "Cody Tapscott",
+                    "commit": "2264f502",
+                    "message": "codegen: implement `sret_union` ABI for pointer-ful types (#55045)",
+                    "date": "2025-12-08 16:29"
+                },
+                {
+                    "duration": 221,
+                    "build": 52607,
+                    "author": "Jameson Nash",
+                    "commit": "8fd607a7",
+                    "message": "signals: Implement fake_stack_pop for Linux on x86_64 and i686 (#60013)",
+                    "date": "2025-12-06 19:33"
+                },
+                {
+                    "duration": 206,
+                    "build": 52605,
+                    "author": "Ian Butterworth",
+                    "commit": "18aa2377",
+                    "message": "Don't create a subprocess in the REPL precompile script (#60326)",
+                    "date": "2025-12-06 13:59"
+                },
+                {
+                    "duration": 168,
+                    "build": 52603,
+                    "author": "Mosè Giordano",
+                    "commit": "39a234f2",
+                    "message": "Don't delete input `expmap` files (#60329)",
+                    "date": "2025-12-06 09:59"
+                },
+                {
+                    "duration": 227,
+                    "build": 52521,
+                    "author": "Cody Tapscott",
+                    "commit": "296cca23",
+                    "message": "Bypass `SyntaxNode` in JuliaLowering; fix `kw` bug (#60162)",
+                    "date": "2025-12-02 23:51"
+                },
+                {
+                    "duration": 170,
+                    "build": 52518,
+                    "author": "Andy Dienes",
+                    "commit": "97d9feda",
+                    "message": "Madvise Transparent Huge Pages for large allocations (#59858)",
+                    "date": "2025-12-02 21:40"
+                },
+                {
+                    "duration": 178,
+                    "build": 52509,
+                    "author": "Cody Tapscott",
+                    "commit": "442e8d4e",
+                    "message": "Add `test-JuliaLowering_stdlibs` target for precompiling stdlibs with JuliaLo...",
+                    "date": "2025-12-02 18:27"
+                },
+                {
+                    "duration": 188,
+                    "build": 52505,
+                    "author": "Valentin Churavy",
+                    "commit": "841148d8",
+                    "message": "Fix buffer overflow in jloptions (#60299)",
+                    "date": "2025-12-02 17:32"
+                },
+                {
+                    "duration": 224,
+                    "build": 52492,
+                    "author": "Gabriel Baraldi",
+                    "commit": "9bb86842",
+                    "message": "Relax timing restriction in pidfile test (#60288)",
+                    "date": "2025-12-02 12:01"
+                },
+                {
+                    "duration": 165,
+                    "build": 52490,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "231c9e03",
+                    "message": "Fix copy-paste error in effect comparison (#60297)",
+                    "date": "2025-12-02 09:49"
+                },
+                {
+                    "duration": 170,
+                    "build": 52484,
+                    "author": "Keno Fischer",
+                    "commit": "79b8e456",
+                    "message": "bootstrap: remove duplicated constructor definition warning (#60290)",
+                    "date": "2025-12-02 00:33"
+                },
+                {
+                    "duration": 210,
+                    "build": 52480,
+                    "author": "Cody Tapscott",
+                    "commit": "7a642411",
+                    "message": "[JuliaLowering] `ccall((lib,sym)...)` and `cfunction` fixes (#60257)",
+                    "date": "2025-12-01 22:15"
+                },
+                {
+                    "duration": 186,
+                    "build": 52474,
+                    "author": "Cody Tapscott",
+                    "commit": "68553c58",
+                    "message": "[JuliaLowering] Restrict `K\"VERSION\"` to module arg (#60255)",
+                    "date": "2025-12-01 21:03"
+                },
+                {
+                    "duration": 164,
+                    "build": 52452,
+                    "author": "",
+                    "commit": "adb12cc4",
+                    "message": "Bump actions/checkout from 5.0.0 to 6.0.0 (#60287)",
+                    "date": "2025-12-01 11:48"
+                },
+                {
+                    "duration": 165,
+                    "build": 52447,
+                    "author": "Diogo Correia Netto",
+                    "commit": "c606193e",
+                    "message": "fix indentation in a GC function (#60283)",
+                    "date": "2025-11-30 17:24"
+                },
+                {
+                    "duration": 277,
+                    "build": 52433,
+                    "author": "Mosè Giordano",
+                    "commit": "1067db80",
+                    "message": "Correct version in which at-lock was exported (#60279)",
+                    "date": "2025-11-29 08:00"
+                },
+                {
+                    "duration": 189,
+                    "build": 52430,
+                    "author": "Ian Butterworth",
+                    "commit": "d0060e7f",
+                    "message": "Add propagate_inbounds to some SubString operations (#59615)",
+                    "date": "2025-11-29 06:18"
+                },
+                {
+                    "duration": 162,
+                    "build": 52429,
+                    "author": "Ian Butterworth",
+                    "commit": "cb8734a8",
+                    "message": "🤖 Bump LinearAlgebra stdlib 7e11b5e → b599095 (#60209)",
+                    "date": "2025-11-29 05:38"
+                },
+                {
+                    "duration": 161,
+                    "build": 52428,
+                    "author": "Ian Butterworth",
+                    "commit": "eeeafedb",
+                    "message": "🤖 Bump Tar stdlib 9dd8ed1 → d236fa0 (#60238)",
+                    "date": "2025-11-29 05:37"
+                },
+                {
+                    "duration": 209,
+                    "build": 52424,
+                    "author": "Diogo Correia Netto",
+                    "commit": "0c216396",
+                    "message": "NFC: tidy up the stock GC codebase (part 1) (#60278)",
+                    "date": "2025-11-29 02:56"
+                },
+                {
+                    "duration": 172,
+                    "build": 52410,
+                    "author": "Keno Fischer",
+                    "commit": "1dab497f",
+                    "message": "Define inference lattice types in boot.jl rather than jltypes (#60269)",
+                    "date": "2025-11-28 18:31"
+                },
+                {
+                    "duration": 170,
+                    "build": 52404,
+                    "author": "Ian Butterworth",
+                    "commit": "77d2ffb2",
+                    "message": "🤖 Bump NetworkOptions stdlib 46e14ef → 7034c55 (#60210)",
+                    "date": "2025-11-28 17:38"
+                },
+                {
+                    "duration": 180,
+                    "build": 52403,
+                    "author": "Diogo Correia Netto",
+                    "commit": "8efd1f08",
+                    "message": "Enhance GC devdocs (#60256)",
+                    "date": "2025-11-28 16:16"
+                },
+                {
+                    "duration": 225,
+                    "build": 52381,
+                    "author": "Cody Tapscott",
+                    "commit": "f36882f7",
+                    "message": "Remove libjulia-internal.so dependency on libstdc++ and libgcc (#60248)",
+                    "date": "2025-11-27 01:27"
+                },
+                {
+                    "duration": 230,
+                    "build": 52348,
+                    "author": "",
+                    "commit": "24d8ab52",
+                    "message": "MersenneTwister: clean up constructors (#60185)",
+                    "date": "2025-11-26 15:51"
+                },
+                {
+                    "duration": 160,
+                    "build": 52347,
+                    "author": "Jishnu Bhattacharya",
+                    "commit": "ee6bb20b",
+                    "message": "Fix linearly indexed array math by reshaping arrays (#60164)",
+                    "date": "2025-11-26 14:56"
+                },
+                {
+                    "duration": 161,
+                    "build": 52339,
+                    "author": "Jeff Bezanson",
+                    "commit": "a63cca87",
+                    "message": "Don't introduce a block around `y` in parsing `x' = y` (#60246)",
+                    "date": "2025-11-25 23:20"
+                },
+                {
+                    "duration": 174,
+                    "build": 52338,
+                    "author": "Keno Fischer",
+                    "commit": "3484331c",
+                    "message": "Provide mechanism for Julia syntax evolution (#60018)",
+                    "date": "2025-11-25 23:14"
+                },
+                {
+                    "duration": 185,
+                    "build": 52330,
+                    "author": "Cody Tapscott",
+                    "commit": "b328306f",
+                    "message": "Makefile: add `clean-utf8proc` to `make cleanall` (#60244)",
+                    "date": "2025-11-25 18:33"
+                },
+                {
+                    "duration": 168,
+                    "build": 52326,
+                    "author": "Keno Fischer",
+                    "commit": "a4d2b6a3",
+                    "message": "🤖 Bump Pkg stdlib 2141bf17f → 1e90f07f9 (#60237)",
+                    "date": "2025-11-25 16:28"
+                },
+                {
+                    "duration": 171,
+                    "build": 52321,
+                    "author": "Cody Tapscott",
+                    "commit": "4eab2f7b",
+                    "message": "[JuliaLowering] Fix generated functions when `expr_compat_mode=true` (#60233)",
+                    "date": "2025-11-25 12:34"
+                },
+                {
+                    "duration": 212,
+                    "build": 52309,
+                    "author": "Viral Shah",
+                    "commit": "99936fef",
+                    "message": "Fix link to manual downloads page in README (#60236)",
+                    "date": "2025-11-25 05:24"
+                },
+                {
+                    "duration": 223,
+                    "build": 52305,
+                    "author": "Viral Shah",
+                    "commit": "fff2cfc9",
+                    "message": "Update Julia version in README to v1.12.2 (#60234)",
+                    "date": "2025-11-25 05:13"
+                },
+                {
+                    "duration": 206,
+                    "build": 52298,
+                    "author": "Cody Tapscott",
+                    "commit": "802f1dff",
+                    "message": "[JuliaLowering] Fix handling of unnamed args in `@generated` functions (#60226)",
+                    "date": "2025-11-24 23:23"
+                },
+                {
+                    "duration": 234,
+                    "build": 52285,
+                    "author": "Shuhei Kadowaki",
+                    "commit": "da57d866",
+                    "message": "inference: fix the ptrfree field check (#60214)",
+                    "date": "2025-11-24 18:22"
+                },
+                {
+                    "duration": 183,
+                    "build": 52282,
+                    "author": "Max Horn",
+                    "commit": "ae42e5fe",
+                    "message": "Bump Documenter to 1.16.1 (#60215)",
+                    "date": "2025-11-24 17:10"
+                },
+                {
+                    "duration": 231,
+                    "build": 52268,
+                    "author": "Oscar Smith",
+                    "commit": "fd419bd9",
+                    "message": "make codepoint(c) work for overlong chars (#55152)",
+                    "date": "2025-11-23 16:30"
+                },
+                {
+                    "duration": 214,
+                    "build": 52267,
+                    "author": "Max Horn",
+                    "commit": "21f3b37a",
+                    "message": "Replace some uses of `Array` by `Vector` or `Matrix` (#60154)",
+                    "date": "2025-11-23 15:47"
+                },
+                {
+                    "duration": 207,
+                    "build": 52245,
+                    "author": "Keno Fischer",
+                    "commit": "363d45c3",
+                    "message": "Reject decimal points after hex float literals (#60199)",
+                    "date": "2025-11-22 04:19"
+                },
+                {
+                    "duration": 211,
+                    "build": 52242,
+                    "author": "Mosè Giordano",
+                    "commit": "ddf1b02c",
+                    "message": "Revert \"Add JLJITLinkMemoryManager (ports memory manager to JITLink)\" (#60196)",
+                    "date": "2025-11-22 01:20"
+                },
+                {
+                    "duration": 197,
+                    "build": 52223,
+                    "author": "Max Horn",
+                    "commit": "9af9b158",
+                    "message": "Better order for stdlibs in the Julia manual navbar (#60155)",
+                    "date": "2025-11-21 11:09"
+                },
+                {
+                    "duration": 210,
+                    "build": 52214,
+                    "author": "Sam Schweigel",
+                    "commit": "9f1cc447",
+                    "message": "Use uint64_t for debuginfo address differences/slide (#60179)",
+                    "date": "2025-11-20 17:22"
+                },
+                {
+                    "duration": 162,
+                    "build": 52200,
+                    "author": "Cody Tapscott",
+                    "commit": "46f6c6d1",
+                    "message": "[JuliaLowering] Fix-up `__module__` in macro expansion (#60174)",
+                    "date": "2025-11-19 21:05"
+                },
+                {
+                    "duration": 180,
+                    "build": 52199,
+                    "author": "Cody Tapscott",
+                    "commit": "b1afe036",
+                    "message": "Add uninitialized multi-versioning trampoline for autoinit support (#60171)",
+                    "date": "2025-11-19 20:17"
+                },
+                {
+                    "duration": 221,
+                    "build": 52197,
+                    "author": "",
+                    "commit": "eba48a25",
+                    "message": "Disable the Profile test for the Windows SuspendThread deadlock (#60175)",
+                    "date": "2025-11-19 19:29"
+                },
+                {
+                    "duration": 210,
+                    "build": 52175,
+                    "author": "Sam Schweigel",
+                    "commit": "cd2dc914",
+                    "message": "Use -force_load, rather than -all_load, on ld64 (macOS) (#60160)",
+                    "date": "2025-11-18 23:52"
+                },
+                {
+                    "duration": 162,
+                    "build": 52161,
+                    "author": "Em Chu",
+                    "commit": "625e8c7d",
+                    "message": "[JuliaLowering] Fix placeholders in parameters and decls, work around `hasmet...",
+                    "date": "2025-11-18 17:40"
+                },
+                {
+                    "duration": 188,
+                    "build": 52136,
+                    "author": "Keno Fischer",
+                    "commit": "4060c45d",
+                    "message": "loading: rm no-op conditional in cache rejection (#60150)",
+                    "date": "2025-11-17 13:51"
+                },
+                {
+                    "duration": 179,
+                    "build": 52122,
+                    "author": "Keno Fischer",
+                    "commit": "89243d1c",
+                    "message": "Fix embedding with MSVC (#60142)",
+                    "date": "2025-11-15 20:47"
+                },
+                {
+                    "duration": 227,
+                    "build": 52106,
+                    "author": "Diogo Correia Netto",
+                    "commit": "6a55e524",
+                    "message": "document metrics from GC_Num; rename one metric from GC_Num to match the name...",
+                    "date": "2025-11-14 22:33"
+                }
+            ],
+            "stats": {
+                "min_seconds": 160,
+                "std_seconds": 26.1,
+                "max_seconds": 277,
+                "mean_seconds": 195.9,
+                "median_seconds": 189,
+                "count": 79
             }
         },
         "upload test results i686-linux-gnunet": {
@@ -69055,1295 +70343,7 @@
                 "median_seconds": 13,
                 "count": 105
             }
-        },
-        "juliasyntax linux/x86_64/1.0": {
-            "recent": [
-                {
-                    "duration": 212,
-                    "build": 52985,
-                    "author": "Cody Tapscott",
-                    "commit": "571fa800",
-                    "message": "Document and further clean up node creation functions (#60431)",
-                    "date": "2025-12-26 17:19"
-                },
-                {
-                    "duration": 176,
-                    "build": 52976,
-                    "author": "Keno Fischer",
-                    "commit": "f467548a",
-                    "message": "syntax-versioning: Define behavior in scripts and REPL (#60400)",
-                    "date": "2025-12-25 17:54"
-                },
-                {
-                    "duration": 206,
-                    "build": 52973,
-                    "author": "Ian Butterworth",
-                    "commit": "b6337dd7",
-                    "message": "REPL: fix completion overwriting input after cursor (#60472)",
-                    "date": "2025-12-25 11:55"
-                },
-                {
-                    "duration": 210,
-                    "build": 52971,
-                    "author": "Viral Shah",
-                    "commit": "f2608a49",
-                    "message": "Docs: mention cmd line option for App Installer on Windows (#60464)",
-                    "date": "2025-12-25 09:53"
-                },
-                {
-                    "duration": 163,
-                    "build": 52970,
-                    "author": "Ian Butterworth",
-                    "commit": "0254afcf",
-                    "message": "define generic `in` in terms of `any` (#55669)",
-                    "date": "2025-12-25 02:49"
-                },
-                {
-                    "duration": 182,
-                    "build": 52969,
-                    "author": "Oscar Smith",
-                    "commit": "6e24bafc",
-                    "message": "reduce allocations for string(::IEEEFloat) (#57977)",
-                    "date": "2025-12-25 02:48"
-                },
-                {
-                    "duration": 163,
-                    "build": 52962,
-                    "author": "Cody Tapscott",
-                    "commit": "c711544f",
-                    "message": "Don't make graph type abstract in SyntaxTree (#60430)",
-                    "date": "2025-12-24 19:41"
-                },
-                {
-                    "duration": 185,
-                    "build": 52957,
-                    "author": "Andy Dienes",
-                    "commit": "bcf3fafa",
-                    "message": "use `_string_n` instead of `StringMemory` to reduce allocations for a few `st...",
-                    "date": "2025-12-24 19:16"
-                },
-                {
-                    "duration": 182,
-                    "build": 52946,
-                    "author": "Max Horn",
-                    "commit": "8517fdfa",
-                    "message": "Fix JET warning in Base.sendfile (#60466)",
-                    "date": "2025-12-24 07:24"
-                },
-                {
-                    "duration": 182,
-                    "build": 52945,
-                    "author": "Max Horn",
-                    "commit": "8afae37a",
-                    "message": "Fix JET warning in `TOML.parse_array` (#60465)",
-                    "date": "2025-12-24 07:23"
-                },
-                {
-                    "duration": 217,
-                    "build": 52942,
-                    "author": "Cody Tapscott",
-                    "commit": "8a7223ef",
-                    "message": "[Windows] Use `TimerQueue` API to register Profile watchdog (#60463)",
-                    "date": "2025-12-24 00:17"
-                },
-                {
-                    "duration": 175,
-                    "build": 52939,
-                    "author": "Ian Butterworth",
-                    "commit": "3690b1e0",
-                    "message": "Print `full_name` after precompiling extension (#60456)",
-                    "date": "2025-12-23 22:14"
-                },
-                {
-                    "duration": 243,
-                    "build": 52901,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "b7a217c5",
-                    "message": "[JuliaLowering] fix `@nospecialize` on unnamed arguments (#60432)",
-                    "date": "2025-12-22 18:47"
-                },
-                {
-                    "duration": 220,
-                    "build": 52896,
-                    "author": "Viral Shah",
-                    "commit": "49bc3252",
-                    "message": "Improve contributor onboarding visibility in README (#60443)",
-                    "date": "2025-12-22 13:30"
-                },
-                {
-                    "duration": 220,
-                    "build": 52893,
-                    "author": "Lilith Hafner",
-                    "commit": "e6b29ad9",
-                    "message": "Add support for optionally printing unsigned integers as decimals (#60267)",
-                    "date": "2025-12-21 23:54"
-                },
-                {
-                    "duration": 210,
-                    "build": 52887,
-                    "author": "Andy Dienes",
-                    "commit": "a32911ae",
-                    "message": "Remove unnecessary masking when converting from Bool (#60435)",
-                    "date": "2025-12-20 13:52"
-                },
-                {
-                    "duration": 219,
-                    "build": 52860,
-                    "author": "Mosè Giordano",
-                    "commit": "d9879e3b",
-                    "message": "Fix Makefile typo of USE_SYSTEM_ZSTD (#60422)",
-                    "date": "2025-12-19 07:09"
-                },
-                {
-                    "duration": 172,
-                    "build": 52846,
-                    "author": "Cody Tapscott",
-                    "commit": "3b1a5b6c",
-                    "message": "[JuliaLowering] Miscellaneous fixes for `SparseArrays` precompilation (#60411)",
-                    "date": "2025-12-18 18:53"
-                },
-                {
-                    "duration": 173,
-                    "build": 52843,
-                    "author": "Max Horn",
-                    "commit": "3b21c7f6",
-                    "message": "Fix world age docs link, point to correct manual version (#60384)",
-                    "date": "2025-12-18 16:29"
-                },
-                {
-                    "duration": 220,
-                    "build": 52835,
-                    "author": "Kristoffer Carlsson",
-                    "commit": "b34261b5",
-                    "message": "JuliaSyntax:force specialize on function in `parse_brackets` (#60403)",
-                    "date": "2025-12-17 17:56"
-                },
-                {
-                    "duration": 195,
-                    "build": 52833,
-                    "author": "Jameson Nash",
-                    "commit": "fadb1592",
-                    "message": "codegen: improve codegen size layout of on-stack format for pointer-ful types...",
-                    "date": "2025-12-17 15:22"
-                },
-                {
-                    "duration": 211,
-                    "build": 52820,
-                    "author": "Cody Tapscott",
-                    "commit": "1cff1301",
-                    "message": "`Expr`/`SyntaxTree` parity: trivial conversions (#60373)",
-                    "date": "2025-12-16 23:39"
-                },
-                {
-                    "duration": 232,
-                    "build": 52804,
-                    "author": "Alex Arslan",
-                    "commit": "6d944d15",
-                    "message": "Fix `membarrier` usage on FreeBSD (#60389)",
-                    "date": "2025-12-16 12:02"
-                },
-                {
-                    "duration": 185,
-                    "build": 52801,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "893635dc",
-                    "message": "REPLCompletions: Add some more keywords to completion list (#60380)",
-                    "date": "2025-12-16 08:28"
-                },
-                {
-                    "duration": 164,
-                    "build": 52772,
-                    "author": "Ian Butterworth",
-                    "commit": "d2cbb4e3",
-                    "message": "🤖 Bump Pkg stdlib 1e90f07f9 → 61e074274 (#60382)",
-                    "date": "2025-12-15 08:05"
-                },
-                {
-                    "duration": 221,
-                    "build": 52738,
-                    "author": "Jeff Bezanson",
-                    "commit": "4f94b1d6",
-                    "message": "apply 1.13 news edits to history (#60360)",
-                    "date": "2025-12-12 19:35"
-                },
-                {
-                    "duration": 253,
-                    "build": 52676,
-                    "author": "Cody Tapscott",
-                    "commit": "42d461aa",
-                    "message": "[JuliaLowering] Refactor scope resolution pass (#60316)",
-                    "date": "2025-12-11 18:05"
-                },
-                {
-                    "duration": 213,
-                    "build": 52647,
-                    "author": "Jeff Bezanson",
-                    "commit": "cd42334a",
-                    "message": "Include missing sub- and superscripts in operator suffix list (#60285)",
-                    "date": "2025-12-10 21:45"
-                },
-                {
-                    "duration": 213,
-                    "build": 52633,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "3efd5e7c",
-                    "message": "Proactively compile lambdas when the type of the closure is known (#60259)",
-                    "date": "2025-12-09 19:17"
-                },
-                {
-                    "duration": 168,
-                    "build": 52620,
-                    "author": "Cody Tapscott",
-                    "commit": "2264f502",
-                    "message": "codegen: implement `sret_union` ABI for pointer-ful types (#55045)",
-                    "date": "2025-12-08 16:29"
-                },
-                {
-                    "duration": 221,
-                    "build": 52607,
-                    "author": "Jameson Nash",
-                    "commit": "8fd607a7",
-                    "message": "signals: Implement fake_stack_pop for Linux on x86_64 and i686 (#60013)",
-                    "date": "2025-12-06 19:33"
-                },
-                {
-                    "duration": 206,
-                    "build": 52605,
-                    "author": "Ian Butterworth",
-                    "commit": "18aa2377",
-                    "message": "Don't create a subprocess in the REPL precompile script (#60326)",
-                    "date": "2025-12-06 13:59"
-                },
-                {
-                    "duration": 168,
-                    "build": 52603,
-                    "author": "Mosè Giordano",
-                    "commit": "39a234f2",
-                    "message": "Don't delete input `expmap` files (#60329)",
-                    "date": "2025-12-06 09:59"
-                },
-                {
-                    "duration": 227,
-                    "build": 52521,
-                    "author": "Cody Tapscott",
-                    "commit": "296cca23",
-                    "message": "Bypass `SyntaxNode` in JuliaLowering; fix `kw` bug (#60162)",
-                    "date": "2025-12-02 23:51"
-                },
-                {
-                    "duration": 170,
-                    "build": 52518,
-                    "author": "Andy Dienes",
-                    "commit": "97d9feda",
-                    "message": "Madvise Transparent Huge Pages for large allocations (#59858)",
-                    "date": "2025-12-02 21:40"
-                },
-                {
-                    "duration": 178,
-                    "build": 52509,
-                    "author": "Cody Tapscott",
-                    "commit": "442e8d4e",
-                    "message": "Add `test-JuliaLowering_stdlibs` target for precompiling stdlibs with JuliaLo...",
-                    "date": "2025-12-02 18:27"
-                },
-                {
-                    "duration": 188,
-                    "build": 52505,
-                    "author": "Valentin Churavy",
-                    "commit": "841148d8",
-                    "message": "Fix buffer overflow in jloptions (#60299)",
-                    "date": "2025-12-02 17:32"
-                },
-                {
-                    "duration": 224,
-                    "build": 52492,
-                    "author": "Gabriel Baraldi",
-                    "commit": "9bb86842",
-                    "message": "Relax timing restriction in pidfile test (#60288)",
-                    "date": "2025-12-02 12:01"
-                },
-                {
-                    "duration": 165,
-                    "build": 52490,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "231c9e03",
-                    "message": "Fix copy-paste error in effect comparison (#60297)",
-                    "date": "2025-12-02 09:49"
-                },
-                {
-                    "duration": 170,
-                    "build": 52484,
-                    "author": "Keno Fischer",
-                    "commit": "79b8e456",
-                    "message": "bootstrap: remove duplicated constructor definition warning (#60290)",
-                    "date": "2025-12-02 00:33"
-                },
-                {
-                    "duration": 210,
-                    "build": 52480,
-                    "author": "Cody Tapscott",
-                    "commit": "7a642411",
-                    "message": "[JuliaLowering] `ccall((lib,sym)...)` and `cfunction` fixes (#60257)",
-                    "date": "2025-12-01 22:15"
-                },
-                {
-                    "duration": 186,
-                    "build": 52474,
-                    "author": "Cody Tapscott",
-                    "commit": "68553c58",
-                    "message": "[JuliaLowering] Restrict `K\"VERSION\"` to module arg (#60255)",
-                    "date": "2025-12-01 21:03"
-                },
-                {
-                    "duration": 164,
-                    "build": 52452,
-                    "author": "",
-                    "commit": "adb12cc4",
-                    "message": "Bump actions/checkout from 5.0.0 to 6.0.0 (#60287)",
-                    "date": "2025-12-01 11:48"
-                },
-                {
-                    "duration": 165,
-                    "build": 52447,
-                    "author": "Diogo Correia Netto",
-                    "commit": "c606193e",
-                    "message": "fix indentation in a GC function (#60283)",
-                    "date": "2025-11-30 17:24"
-                },
-                {
-                    "duration": 277,
-                    "build": 52433,
-                    "author": "Mosè Giordano",
-                    "commit": "1067db80",
-                    "message": "Correct version in which at-lock was exported (#60279)",
-                    "date": "2025-11-29 08:00"
-                },
-                {
-                    "duration": 189,
-                    "build": 52430,
-                    "author": "Ian Butterworth",
-                    "commit": "d0060e7f",
-                    "message": "Add propagate_inbounds to some SubString operations (#59615)",
-                    "date": "2025-11-29 06:18"
-                },
-                {
-                    "duration": 162,
-                    "build": 52429,
-                    "author": "Ian Butterworth",
-                    "commit": "cb8734a8",
-                    "message": "🤖 Bump LinearAlgebra stdlib 7e11b5e → b599095 (#60209)",
-                    "date": "2025-11-29 05:38"
-                },
-                {
-                    "duration": 161,
-                    "build": 52428,
-                    "author": "Ian Butterworth",
-                    "commit": "eeeafedb",
-                    "message": "🤖 Bump Tar stdlib 9dd8ed1 → d236fa0 (#60238)",
-                    "date": "2025-11-29 05:37"
-                },
-                {
-                    "duration": 209,
-                    "build": 52424,
-                    "author": "Diogo Correia Netto",
-                    "commit": "0c216396",
-                    "message": "NFC: tidy up the stock GC codebase (part 1) (#60278)",
-                    "date": "2025-11-29 02:56"
-                },
-                {
-                    "duration": 172,
-                    "build": 52410,
-                    "author": "Keno Fischer",
-                    "commit": "1dab497f",
-                    "message": "Define inference lattice types in boot.jl rather than jltypes (#60269)",
-                    "date": "2025-11-28 18:31"
-                },
-                {
-                    "duration": 170,
-                    "build": 52404,
-                    "author": "Ian Butterworth",
-                    "commit": "77d2ffb2",
-                    "message": "🤖 Bump NetworkOptions stdlib 46e14ef → 7034c55 (#60210)",
-                    "date": "2025-11-28 17:38"
-                },
-                {
-                    "duration": 180,
-                    "build": 52403,
-                    "author": "Diogo Correia Netto",
-                    "commit": "8efd1f08",
-                    "message": "Enhance GC devdocs (#60256)",
-                    "date": "2025-11-28 16:16"
-                },
-                {
-                    "duration": 225,
-                    "build": 52381,
-                    "author": "Cody Tapscott",
-                    "commit": "f36882f7",
-                    "message": "Remove libjulia-internal.so dependency on libstdc++ and libgcc (#60248)",
-                    "date": "2025-11-27 01:27"
-                },
-                {
-                    "duration": 230,
-                    "build": 52348,
-                    "author": "",
-                    "commit": "24d8ab52",
-                    "message": "MersenneTwister: clean up constructors (#60185)",
-                    "date": "2025-11-26 15:51"
-                },
-                {
-                    "duration": 160,
-                    "build": 52347,
-                    "author": "Jishnu Bhattacharya",
-                    "commit": "ee6bb20b",
-                    "message": "Fix linearly indexed array math by reshaping arrays (#60164)",
-                    "date": "2025-11-26 14:56"
-                },
-                {
-                    "duration": 161,
-                    "build": 52339,
-                    "author": "Jeff Bezanson",
-                    "commit": "a63cca87",
-                    "message": "Don't introduce a block around `y` in parsing `x' = y` (#60246)",
-                    "date": "2025-11-25 23:20"
-                },
-                {
-                    "duration": 174,
-                    "build": 52338,
-                    "author": "Keno Fischer",
-                    "commit": "3484331c",
-                    "message": "Provide mechanism for Julia syntax evolution (#60018)",
-                    "date": "2025-11-25 23:14"
-                },
-                {
-                    "duration": 185,
-                    "build": 52330,
-                    "author": "Cody Tapscott",
-                    "commit": "b328306f",
-                    "message": "Makefile: add `clean-utf8proc` to `make cleanall` (#60244)",
-                    "date": "2025-11-25 18:33"
-                },
-                {
-                    "duration": 168,
-                    "build": 52326,
-                    "author": "Keno Fischer",
-                    "commit": "a4d2b6a3",
-                    "message": "🤖 Bump Pkg stdlib 2141bf17f → 1e90f07f9 (#60237)",
-                    "date": "2025-11-25 16:28"
-                },
-                {
-                    "duration": 171,
-                    "build": 52321,
-                    "author": "Cody Tapscott",
-                    "commit": "4eab2f7b",
-                    "message": "[JuliaLowering] Fix generated functions when `expr_compat_mode=true` (#60233)",
-                    "date": "2025-11-25 12:34"
-                },
-                {
-                    "duration": 212,
-                    "build": 52309,
-                    "author": "Viral Shah",
-                    "commit": "99936fef",
-                    "message": "Fix link to manual downloads page in README (#60236)",
-                    "date": "2025-11-25 05:24"
-                },
-                {
-                    "duration": 223,
-                    "build": 52305,
-                    "author": "Viral Shah",
-                    "commit": "fff2cfc9",
-                    "message": "Update Julia version in README to v1.12.2 (#60234)",
-                    "date": "2025-11-25 05:13"
-                },
-                {
-                    "duration": 206,
-                    "build": 52298,
-                    "author": "Cody Tapscott",
-                    "commit": "802f1dff",
-                    "message": "[JuliaLowering] Fix handling of unnamed args in `@generated` functions (#60226)",
-                    "date": "2025-11-24 23:23"
-                },
-                {
-                    "duration": 234,
-                    "build": 52285,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "da57d866",
-                    "message": "inference: fix the ptrfree field check (#60214)",
-                    "date": "2025-11-24 18:22"
-                },
-                {
-                    "duration": 183,
-                    "build": 52282,
-                    "author": "Max Horn",
-                    "commit": "ae42e5fe",
-                    "message": "Bump Documenter to 1.16.1 (#60215)",
-                    "date": "2025-11-24 17:10"
-                },
-                {
-                    "duration": 231,
-                    "build": 52268,
-                    "author": "Oscar Smith",
-                    "commit": "fd419bd9",
-                    "message": "make codepoint(c) work for overlong chars (#55152)",
-                    "date": "2025-11-23 16:30"
-                },
-                {
-                    "duration": 214,
-                    "build": 52267,
-                    "author": "Max Horn",
-                    "commit": "21f3b37a",
-                    "message": "Replace some uses of `Array` by `Vector` or `Matrix` (#60154)",
-                    "date": "2025-11-23 15:47"
-                },
-                {
-                    "duration": 207,
-                    "build": 52245,
-                    "author": "Keno Fischer",
-                    "commit": "363d45c3",
-                    "message": "Reject decimal points after hex float literals (#60199)",
-                    "date": "2025-11-22 04:19"
-                },
-                {
-                    "duration": 211,
-                    "build": 52242,
-                    "author": "Mosè Giordano",
-                    "commit": "ddf1b02c",
-                    "message": "Revert \"Add JLJITLinkMemoryManager (ports memory manager to JITLink)\" (#60196)",
-                    "date": "2025-11-22 01:20"
-                },
-                {
-                    "duration": 197,
-                    "build": 52223,
-                    "author": "Max Horn",
-                    "commit": "9af9b158",
-                    "message": "Better order for stdlibs in the Julia manual navbar (#60155)",
-                    "date": "2025-11-21 11:09"
-                },
-                {
-                    "duration": 210,
-                    "build": 52214,
-                    "author": "Sam Schweigel",
-                    "commit": "9f1cc447",
-                    "message": "Use uint64_t for debuginfo address differences/slide (#60179)",
-                    "date": "2025-11-20 17:22"
-                },
-                {
-                    "duration": 162,
-                    "build": 52200,
-                    "author": "Cody Tapscott",
-                    "commit": "46f6c6d1",
-                    "message": "[JuliaLowering] Fix-up `__module__` in macro expansion (#60174)",
-                    "date": "2025-11-19 21:05"
-                },
-                {
-                    "duration": 180,
-                    "build": 52199,
-                    "author": "Cody Tapscott",
-                    "commit": "b1afe036",
-                    "message": "Add uninitialized multi-versioning trampoline for autoinit support (#60171)",
-                    "date": "2025-11-19 20:17"
-                },
-                {
-                    "duration": 221,
-                    "build": 52197,
-                    "author": "",
-                    "commit": "eba48a25",
-                    "message": "Disable the Profile test for the Windows SuspendThread deadlock (#60175)",
-                    "date": "2025-11-19 19:29"
-                },
-                {
-                    "duration": 210,
-                    "build": 52175,
-                    "author": "Sam Schweigel",
-                    "commit": "cd2dc914",
-                    "message": "Use -force_load, rather than -all_load, on ld64 (macOS) (#60160)",
-                    "date": "2025-11-18 23:52"
-                },
-                {
-                    "duration": 162,
-                    "build": 52161,
-                    "author": "Em Chu",
-                    "commit": "625e8c7d",
-                    "message": "[JuliaLowering] Fix placeholders in parameters and decls, work around `hasmet...",
-                    "date": "2025-11-18 17:40"
-                },
-                {
-                    "duration": 188,
-                    "build": 52136,
-                    "author": "Keno Fischer",
-                    "commit": "4060c45d",
-                    "message": "loading: rm no-op conditional in cache rejection (#60150)",
-                    "date": "2025-11-17 13:51"
-                },
-                {
-                    "duration": 179,
-                    "build": 52122,
-                    "author": "Keno Fischer",
-                    "commit": "89243d1c",
-                    "message": "Fix embedding with MSVC (#60142)",
-                    "date": "2025-11-15 20:47"
-                },
-                {
-                    "duration": 227,
-                    "build": 52106,
-                    "author": "Diogo Correia Netto",
-                    "commit": "6a55e524",
-                    "message": "document metrics from GC_Num; rename one metric from GC_Num to match the name...",
-                    "date": "2025-11-14 22:33"
-                }
-            ],
-            "stats": {
-                "min_seconds": 160,
-                "std_seconds": 26.1,
-                "max_seconds": 277,
-                "mean_seconds": 195.9,
-                "median_seconds": 189,
-                "count": 79
-            }
-        },
-        "juliasyntax macos/x86_64/1.6": {
-            "recent": [
-                {
-                    "duration": 953,
-                    "build": 52985,
-                    "author": "Cody Tapscott",
-                    "commit": "571fa800",
-                    "message": "Document and further clean up node creation functions (#60431)",
-                    "date": "2025-12-26 17:19"
-                },
-                {
-                    "duration": 136,
-                    "build": 52976,
-                    "author": "Keno Fischer",
-                    "commit": "f467548a",
-                    "message": "syntax-versioning: Define behavior in scripts and REPL (#60400)",
-                    "date": "2025-12-25 17:54"
-                },
-                {
-                    "duration": 130,
-                    "build": 52973,
-                    "author": "Ian Butterworth",
-                    "commit": "b6337dd7",
-                    "message": "REPL: fix completion overwriting input after cursor (#60472)",
-                    "date": "2025-12-25 11:55"
-                },
-                {
-                    "duration": 133,
-                    "build": 52971,
-                    "author": "Viral Shah",
-                    "commit": "f2608a49",
-                    "message": "Docs: mention cmd line option for App Installer on Windows (#60464)",
-                    "date": "2025-12-25 09:53"
-                },
-                {
-                    "duration": 132,
-                    "build": 52970,
-                    "author": "Ian Butterworth",
-                    "commit": "0254afcf",
-                    "message": "define generic `in` in terms of `any` (#55669)",
-                    "date": "2025-12-25 02:49"
-                },
-                {
-                    "duration": 127,
-                    "build": 52969,
-                    "author": "Oscar Smith",
-                    "commit": "6e24bafc",
-                    "message": "reduce allocations for string(::IEEEFloat) (#57977)",
-                    "date": "2025-12-25 02:48"
-                },
-                {
-                    "duration": 132,
-                    "build": 52962,
-                    "author": "Cody Tapscott",
-                    "commit": "c711544f",
-                    "message": "Don't make graph type abstract in SyntaxTree (#60430)",
-                    "date": "2025-12-24 19:41"
-                },
-                {
-                    "duration": 134,
-                    "build": 52957,
-                    "author": "Andy Dienes",
-                    "commit": "bcf3fafa",
-                    "message": "use `_string_n` instead of `StringMemory` to reduce allocations for a few `st...",
-                    "date": "2025-12-24 19:16"
-                },
-                {
-                    "duration": 122,
-                    "build": 52946,
-                    "author": "Max Horn",
-                    "commit": "8517fdfa",
-                    "message": "Fix JET warning in Base.sendfile (#60466)",
-                    "date": "2025-12-24 07:24"
-                },
-                {
-                    "duration": 131,
-                    "build": 52945,
-                    "author": "Max Horn",
-                    "commit": "8afae37a",
-                    "message": "Fix JET warning in `TOML.parse_array` (#60465)",
-                    "date": "2025-12-24 07:23"
-                },
-                {
-                    "duration": 130,
-                    "build": 52942,
-                    "author": "Cody Tapscott",
-                    "commit": "8a7223ef",
-                    "message": "[Windows] Use `TimerQueue` API to register Profile watchdog (#60463)",
-                    "date": "2025-12-24 00:17"
-                },
-                {
-                    "duration": 132,
-                    "build": 52939,
-                    "author": "Ian Butterworth",
-                    "commit": "3690b1e0",
-                    "message": "Print `full_name` after precompiling extension (#60456)",
-                    "date": "2025-12-23 22:14"
-                },
-                {
-                    "duration": 131,
-                    "build": 52901,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "b7a217c5",
-                    "message": "[JuliaLowering] fix `@nospecialize` on unnamed arguments (#60432)",
-                    "date": "2025-12-22 18:47"
-                },
-                {
-                    "duration": 126,
-                    "build": 52896,
-                    "author": "Viral Shah",
-                    "commit": "49bc3252",
-                    "message": "Improve contributor onboarding visibility in README (#60443)",
-                    "date": "2025-12-22 13:30"
-                },
-                {
-                    "duration": 132,
-                    "build": 52893,
-                    "author": "Lilith Hafner",
-                    "commit": "e6b29ad9",
-                    "message": "Add support for optionally printing unsigned integers as decimals (#60267)",
-                    "date": "2025-12-21 23:54"
-                },
-                {
-                    "duration": 132,
-                    "build": 52887,
-                    "author": "Andy Dienes",
-                    "commit": "a32911ae",
-                    "message": "Remove unnecessary masking when converting from Bool (#60435)",
-                    "date": "2025-12-20 13:52"
-                },
-                {
-                    "duration": 138,
-                    "build": 52860,
-                    "author": "Mosè Giordano",
-                    "commit": "d9879e3b",
-                    "message": "Fix Makefile typo of USE_SYSTEM_ZSTD (#60422)",
-                    "date": "2025-12-19 07:09"
-                },
-                {
-                    "duration": 131,
-                    "build": 52846,
-                    "author": "Cody Tapscott",
-                    "commit": "3b1a5b6c",
-                    "message": "[JuliaLowering] Miscellaneous fixes for `SparseArrays` precompilation (#60411)",
-                    "date": "2025-12-18 18:53"
-                },
-                {
-                    "duration": 134,
-                    "build": 52843,
-                    "author": "Max Horn",
-                    "commit": "3b21c7f6",
-                    "message": "Fix world age docs link, point to correct manual version (#60384)",
-                    "date": "2025-12-18 16:29"
-                },
-                {
-                    "duration": 125,
-                    "build": 52835,
-                    "author": "Kristoffer Carlsson",
-                    "commit": "b34261b5",
-                    "message": "JuliaSyntax:force specialize on function in `parse_brackets` (#60403)",
-                    "date": "2025-12-17 17:56"
-                },
-                {
-                    "duration": 137,
-                    "build": 52833,
-                    "author": "Jameson Nash",
-                    "commit": "fadb1592",
-                    "message": "codegen: improve codegen size layout of on-stack format for pointer-ful types...",
-                    "date": "2025-12-17 15:22"
-                },
-                {
-                    "duration": 124,
-                    "build": 52820,
-                    "author": "Cody Tapscott",
-                    "commit": "1cff1301",
-                    "message": "`Expr`/`SyntaxTree` parity: trivial conversions (#60373)",
-                    "date": "2025-12-16 23:39"
-                },
-                {
-                    "duration": 125,
-                    "build": 52804,
-                    "author": "Alex Arslan",
-                    "commit": "6d944d15",
-                    "message": "Fix `membarrier` usage on FreeBSD (#60389)",
-                    "date": "2025-12-16 12:02"
-                },
-                {
-                    "duration": 127,
-                    "build": 52801,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "893635dc",
-                    "message": "REPLCompletions: Add some more keywords to completion list (#60380)",
-                    "date": "2025-12-16 08:28"
-                },
-                {
-                    "duration": 131,
-                    "build": 52772,
-                    "author": "Ian Butterworth",
-                    "commit": "d2cbb4e3",
-                    "message": "🤖 Bump Pkg stdlib 1e90f07f9 → 61e074274 (#60382)",
-                    "date": "2025-12-15 08:05"
-                },
-                {
-                    "duration": 129,
-                    "build": 52738,
-                    "author": "Jeff Bezanson",
-                    "commit": "4f94b1d6",
-                    "message": "apply 1.13 news edits to history (#60360)",
-                    "date": "2025-12-12 19:35"
-                },
-                {
-                    "duration": 129,
-                    "build": 52676,
-                    "author": "Cody Tapscott",
-                    "commit": "42d461aa",
-                    "message": "[JuliaLowering] Refactor scope resolution pass (#60316)",
-                    "date": "2025-12-11 18:05"
-                },
-                {
-                    "duration": 136,
-                    "build": 52647,
-                    "author": "Jeff Bezanson",
-                    "commit": "cd42334a",
-                    "message": "Include missing sub- and superscripts in operator suffix list (#60285)",
-                    "date": "2025-12-10 21:45"
-                },
-                {
-                    "duration": 125,
-                    "build": 52633,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "3efd5e7c",
-                    "message": "Proactively compile lambdas when the type of the closure is known (#60259)",
-                    "date": "2025-12-09 19:17"
-                },
-                {
-                    "duration": 124,
-                    "build": 52620,
-                    "author": "Cody Tapscott",
-                    "commit": "2264f502",
-                    "message": "codegen: implement `sret_union` ABI for pointer-ful types (#55045)",
-                    "date": "2025-12-08 16:29"
-                },
-                {
-                    "duration": 137,
-                    "build": 52607,
-                    "author": "Jameson Nash",
-                    "commit": "8fd607a7",
-                    "message": "signals: Implement fake_stack_pop for Linux on x86_64 and i686 (#60013)",
-                    "date": "2025-12-06 19:33"
-                },
-                {
-                    "duration": 129,
-                    "build": 52605,
-                    "author": "Ian Butterworth",
-                    "commit": "18aa2377",
-                    "message": "Don't create a subprocess in the REPL precompile script (#60326)",
-                    "date": "2025-12-06 13:59"
-                },
-                {
-                    "duration": 136,
-                    "build": 52603,
-                    "author": "Mosè Giordano",
-                    "commit": "39a234f2",
-                    "message": "Don't delete input `expmap` files (#60329)",
-                    "date": "2025-12-06 09:59"
-                },
-                {
-                    "duration": 130,
-                    "build": 52521,
-                    "author": "Cody Tapscott",
-                    "commit": "296cca23",
-                    "message": "Bypass `SyntaxNode` in JuliaLowering; fix `kw` bug (#60162)",
-                    "date": "2025-12-02 23:51"
-                },
-                {
-                    "duration": 125,
-                    "build": 52518,
-                    "author": "Andy Dienes",
-                    "commit": "97d9feda",
-                    "message": "Madvise Transparent Huge Pages for large allocations (#59858)",
-                    "date": "2025-12-02 21:40"
-                },
-                {
-                    "duration": 130,
-                    "build": 52509,
-                    "author": "Cody Tapscott",
-                    "commit": "442e8d4e",
-                    "message": "Add `test-JuliaLowering_stdlibs` target for precompiling stdlibs with JuliaLo...",
-                    "date": "2025-12-02 18:27"
-                },
-                {
-                    "duration": 125,
-                    "build": 52505,
-                    "author": "Valentin Churavy",
-                    "commit": "841148d8",
-                    "message": "Fix buffer overflow in jloptions (#60299)",
-                    "date": "2025-12-02 17:32"
-                },
-                {
-                    "duration": 125,
-                    "build": 52492,
-                    "author": "Gabriel Baraldi",
-                    "commit": "9bb86842",
-                    "message": "Relax timing restriction in pidfile test (#60288)",
-                    "date": "2025-12-02 12:01"
-                },
-                {
-                    "duration": 138,
-                    "build": 52490,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "231c9e03",
-                    "message": "Fix copy-paste error in effect comparison (#60297)",
-                    "date": "2025-12-02 09:49"
-                },
-                {
-                    "duration": 135,
-                    "build": 52484,
-                    "author": "Keno Fischer",
-                    "commit": "79b8e456",
-                    "message": "bootstrap: remove duplicated constructor definition warning (#60290)",
-                    "date": "2025-12-02 00:33"
-                },
-                {
-                    "duration": 132,
-                    "build": 52480,
-                    "author": "Cody Tapscott",
-                    "commit": "7a642411",
-                    "message": "[JuliaLowering] `ccall((lib,sym)...)` and `cfunction` fixes (#60257)",
-                    "date": "2025-12-01 22:15"
-                },
-                {
-                    "duration": 139,
-                    "build": 52474,
-                    "author": "Cody Tapscott",
-                    "commit": "68553c58",
-                    "message": "[JuliaLowering] Restrict `K\"VERSION\"` to module arg (#60255)",
-                    "date": "2025-12-01 21:03"
-                },
-                {
-                    "duration": 132,
-                    "build": 52452,
-                    "author": "",
-                    "commit": "adb12cc4",
-                    "message": "Bump actions/checkout from 5.0.0 to 6.0.0 (#60287)",
-                    "date": "2025-12-01 11:48"
-                },
-                {
-                    "duration": 125,
-                    "build": 52447,
-                    "author": "Diogo Correia Netto",
-                    "commit": "c606193e",
-                    "message": "fix indentation in a GC function (#60283)",
-                    "date": "2025-11-30 17:24"
-                },
-                {
-                    "duration": 133,
-                    "build": 52433,
-                    "author": "Mosè Giordano",
-                    "commit": "1067db80",
-                    "message": "Correct version in which at-lock was exported (#60279)",
-                    "date": "2025-11-29 08:00"
-                },
-                {
-                    "duration": 131,
-                    "build": 52430,
-                    "author": "Ian Butterworth",
-                    "commit": "d0060e7f",
-                    "message": "Add propagate_inbounds to some SubString operations (#59615)",
-                    "date": "2025-11-29 06:18"
-                },
-                {
-                    "duration": 124,
-                    "build": 52429,
-                    "author": "Ian Butterworth",
-                    "commit": "cb8734a8",
-                    "message": "🤖 Bump LinearAlgebra stdlib 7e11b5e → b599095 (#60209)",
-                    "date": "2025-11-29 05:38"
-                },
-                {
-                    "duration": 130,
-                    "build": 52428,
-                    "author": "Ian Butterworth",
-                    "commit": "eeeafedb",
-                    "message": "🤖 Bump Tar stdlib 9dd8ed1 → d236fa0 (#60238)",
-                    "date": "2025-11-29 05:37"
-                },
-                {
-                    "duration": 124,
-                    "build": 52424,
-                    "author": "Diogo Correia Netto",
-                    "commit": "0c216396",
-                    "message": "NFC: tidy up the stock GC codebase (part 1) (#60278)",
-                    "date": "2025-11-29 02:56"
-                },
-                {
-                    "duration": 131,
-                    "build": 52410,
-                    "author": "Keno Fischer",
-                    "commit": "1dab497f",
-                    "message": "Define inference lattice types in boot.jl rather than jltypes (#60269)",
-                    "date": "2025-11-28 18:31"
-                },
-                {
-                    "duration": 134,
-                    "build": 52404,
-                    "author": "Ian Butterworth",
-                    "commit": "77d2ffb2",
-                    "message": "🤖 Bump NetworkOptions stdlib 46e14ef → 7034c55 (#60210)",
-                    "date": "2025-11-28 17:38"
-                },
-                {
-                    "duration": 125,
-                    "build": 52403,
-                    "author": "Diogo Correia Netto",
-                    "commit": "8efd1f08",
-                    "message": "Enhance GC devdocs (#60256)",
-                    "date": "2025-11-28 16:16"
-                },
-                {
-                    "duration": 136,
-                    "build": 52381,
-                    "author": "Cody Tapscott",
-                    "commit": "f36882f7",
-                    "message": "Remove libjulia-internal.so dependency on libstdc++ and libgcc (#60248)",
-                    "date": "2025-11-27 01:27"
-                },
-                {
-                    "duration": 129,
-                    "build": 52348,
-                    "author": "",
-                    "commit": "24d8ab52",
-                    "message": "MersenneTwister: clean up constructors (#60185)",
-                    "date": "2025-11-26 15:51"
-                },
-                {
-                    "duration": 129,
-                    "build": 52347,
-                    "author": "Jishnu Bhattacharya",
-                    "commit": "ee6bb20b",
-                    "message": "Fix linearly indexed array math by reshaping arrays (#60164)",
-                    "date": "2025-11-26 14:56"
-                },
-                {
-                    "duration": 136,
-                    "build": 52339,
-                    "author": "Jeff Bezanson",
-                    "commit": "a63cca87",
-                    "message": "Don't introduce a block around `y` in parsing `x' = y` (#60246)",
-                    "date": "2025-11-25 23:20"
-                },
-                {
-                    "duration": 128,
-                    "build": 52338,
-                    "author": "Keno Fischer",
-                    "commit": "3484331c",
-                    "message": "Provide mechanism for Julia syntax evolution (#60018)",
-                    "date": "2025-11-25 23:14"
-                },
-                {
-                    "duration": 135,
-                    "build": 52330,
-                    "author": "Cody Tapscott",
-                    "commit": "b328306f",
-                    "message": "Makefile: add `clean-utf8proc` to `make cleanall` (#60244)",
-                    "date": "2025-11-25 18:33"
-                },
-                {
-                    "duration": 133,
-                    "build": 52326,
-                    "author": "Keno Fischer",
-                    "commit": "a4d2b6a3",
-                    "message": "🤖 Bump Pkg stdlib 2141bf17f → 1e90f07f9 (#60237)",
-                    "date": "2025-11-25 16:28"
-                },
-                {
-                    "duration": 123,
-                    "build": 52321,
-                    "author": "Cody Tapscott",
-                    "commit": "4eab2f7b",
-                    "message": "[JuliaLowering] Fix generated functions when `expr_compat_mode=true` (#60233)",
-                    "date": "2025-11-25 12:34"
-                },
-                {
-                    "duration": 132,
-                    "build": 52309,
-                    "author": "Viral Shah",
-                    "commit": "99936fef",
-                    "message": "Fix link to manual downloads page in README (#60236)",
-                    "date": "2025-11-25 05:24"
-                },
-                {
-                    "duration": 133,
-                    "build": 52305,
-                    "author": "Viral Shah",
-                    "commit": "fff2cfc9",
-                    "message": "Update Julia version in README to v1.12.2 (#60234)",
-                    "date": "2025-11-25 05:13"
-                },
-                {
-                    "duration": 132,
-                    "build": 52298,
-                    "author": "Cody Tapscott",
-                    "commit": "802f1dff",
-                    "message": "[JuliaLowering] Fix handling of unnamed args in `@generated` functions (#60226)",
-                    "date": "2025-11-24 23:23"
-                },
-                {
-                    "duration": 131,
-                    "build": 52285,
-                    "author": "Shuhei Kadowaki",
-                    "commit": "da57d866",
-                    "message": "inference: fix the ptrfree field check (#60214)",
-                    "date": "2025-11-24 18:22"
-                },
-                {
-                    "duration": 130,
-                    "build": 52282,
-                    "author": "Max Horn",
-                    "commit": "ae42e5fe",
-                    "message": "Bump Documenter to 1.16.1 (#60215)",
-                    "date": "2025-11-24 17:10"
-                },
-                {
-                    "duration": 140,
-                    "build": 52268,
-                    "author": "Oscar Smith",
-                    "commit": "fd419bd9",
-                    "message": "make codepoint(c) work for overlong chars (#55152)",
-                    "date": "2025-11-23 16:30"
-                },
-                {
-                    "duration": 136,
-                    "build": 52267,
-                    "author": "Max Horn",
-                    "commit": "21f3b37a",
-                    "message": "Replace some uses of `Array` by `Vector` or `Matrix` (#60154)",
-                    "date": "2025-11-23 15:47"
-                },
-                {
-                    "duration": 122,
-                    "build": 52245,
-                    "author": "Keno Fischer",
-                    "commit": "363d45c3",
-                    "message": "Reject decimal points after hex float literals (#60199)",
-                    "date": "2025-11-22 04:19"
-                },
-                {
-                    "duration": 129,
-                    "build": 52242,
-                    "author": "Mosè Giordano",
-                    "commit": "ddf1b02c",
-                    "message": "Revert \"Add JLJITLinkMemoryManager (ports memory manager to JITLink)\" (#60196)",
-                    "date": "2025-11-22 01:20"
-                },
-                {
-                    "duration": 131,
-                    "build": 52223,
-                    "author": "Max Horn",
-                    "commit": "9af9b158",
-                    "message": "Better order for stdlibs in the Julia manual navbar (#60155)",
-                    "date": "2025-11-21 11:09"
-                },
-                {
-                    "duration": 137,
-                    "build": 52214,
-                    "author": "Sam Schweigel",
-                    "commit": "9f1cc447",
-                    "message": "Use uint64_t for debuginfo address differences/slide (#60179)",
-                    "date": "2025-11-20 17:22"
-                },
-                {
-                    "duration": 131,
-                    "build": 52200,
-                    "author": "Cody Tapscott",
-                    "commit": "46f6c6d1",
-                    "message": "[JuliaLowering] Fix-up `__module__` in macro expansion (#60174)",
-                    "date": "2025-11-19 21:05"
-                },
-                {
-                    "duration": 136,
-                    "build": 52199,
-                    "author": "Cody Tapscott",
-                    "commit": "b1afe036",
-                    "message": "Add uninitialized multi-versioning trampoline for autoinit support (#60171)",
-                    "date": "2025-11-19 20:17"
-                },
-                {
-                    "duration": 132,
-                    "build": 52197,
-                    "author": "",
-                    "commit": "eba48a25",
-                    "message": "Disable the Profile test for the Windows SuspendThread deadlock (#60175)",
-                    "date": "2025-11-19 19:29"
-                },
-                {
-                    "duration": 129,
-                    "build": 52175,
-                    "author": "Sam Schweigel",
-                    "commit": "cd2dc914",
-                    "message": "Use -force_load, rather than -all_load, on ld64 (macOS) (#60160)",
-                    "date": "2025-11-18 23:52"
-                },
-                {
-                    "duration": 126,
-                    "build": 52161,
-                    "author": "Em Chu",
-                    "commit": "625e8c7d",
-                    "message": "[JuliaLowering] Fix placeholders in parameters and decls, work around `hasmet...",
-                    "date": "2025-11-18 17:40"
-                },
-                {
-                    "duration": 138,
-                    "build": 52136,
-                    "author": "Keno Fischer",
-                    "commit": "4060c45d",
-                    "message": "loading: rm no-op conditional in cache rejection (#60150)",
-                    "date": "2025-11-17 13:51"
-                },
-                {
-                    "duration": 127,
-                    "build": 52122,
-                    "author": "Keno Fischer",
-                    "commit": "89243d1c",
-                    "message": "Fix embedding with MSVC (#60142)",
-                    "date": "2025-11-15 20:47"
-                },
-                {
-                    "duration": 132,
-                    "build": 52106,
-                    "author": "Diogo Correia Netto",
-                    "commit": "6a55e524",
-                    "message": "document metrics from GC_Num; rename one metric from GC_Num to match the name...",
-                    "date": "2025-11-14 22:33"
-                }
-            ],
-            "stats": {
-                "min_seconds": 122,
-                "std_seconds": 92.6,
-                "max_seconds": 953,
-                "mean_seconds": 141.2,
-                "median_seconds": 131,
-                "count": 79
-            }
         }
     },
-    "generated_at": "2025-12-27T05:49:53Z"
+    "generated_at": "2025-12-27T05:53:48Z"
 }
