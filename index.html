@@ -6,6 +6,9 @@
     <title>Julia CI Timing</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         /* GitHub-style colors with automatic light/dark mode */
         :root {
@@ -63,7 +66,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
             background: var(--color-canvas-default);
             color: var(--color-fg-default);
             font-size: 14px;
@@ -83,9 +86,16 @@
         }
         .toolbar h1 {
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 500;
             color: var(--color-fg-default);
             margin-right: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .julia-logo {
+            height: 18px;
+            width: auto;
         }
         .toolbar .updated {
             color: var(--color-fg-muted);
@@ -356,7 +366,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <h1>🔬 Julia CI Timing</h1>
+        <h1><img src="https://raw.githubusercontent.com/JuliaLang/julia-logo-graphics/master/images/julia-dots.svg" alt="Julia" class="julia-logo">Julia CI Timing</h1>
         <button class="btn" id="btn-all" onclick="selectAllJobs()">All</button>
         <button class="btn" id="btn-none" onclick="deselectAllJobs()">None</button>
         <span class="updated" id="last-updated"></span>
