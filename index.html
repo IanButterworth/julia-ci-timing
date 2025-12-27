@@ -104,6 +104,7 @@
             line-height: 20px;
         }
         .btn:hover { background: var(--color-btn-hover-bg); }
+        .btn-link { text-decoration: none; }
         .btn.primary {
             background: var(--color-btn-primary-bg);
             border-color: var(--color-btn-primary-border);
@@ -359,6 +360,7 @@
         <button class="btn" id="btn-all" onclick="selectAllJobs()">All</button>
         <button class="btn" id="btn-none" onclick="deselectAllJobs()">None</button>
         <span class="updated" id="last-updated"></span>
+        <a href="https://github.com/IanButterworth/julia-ci-timing" target="_blank" class="btn btn-link">GitHub</a>
     </div>
 
     <div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">

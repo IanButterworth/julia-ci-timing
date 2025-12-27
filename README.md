@@ -9,12 +9,18 @@ Visit: **https://IanButterworth.github.io/julia-ci-timing/**
 ## Features
 
 - 📊 Historical job duration charts with time-accurate x-axis
-- 🎯 Matrix-based job selector (platform × type)
+- 🎯 Matrix-based job selector (platform × type, including coverage jobs)
 - 🌓 Automatic light/dark mode (follows system preference)
 - 🔗 Click data points to see commit details and links to GitHub/Buildkite
 - ⏱️ Stats: median, mean, min, max, standard deviation
 - 🔄 Updated every 2 hours via GitHub Actions
 - 📦 Preserves historical data beyond Buildkite's API window
+
+## Data Sources
+
+The dashboard fetches data from two Buildkite pipelines:
+- **julia-master** — Regular builds and tests on every commit
+- **julia-master-scheduled** — Coverage jobs run on periodic commits
 
 ## Local Development
 
