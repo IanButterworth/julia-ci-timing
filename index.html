@@ -1399,14 +1399,31 @@
             });
         }
 
+        function timeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `${days}d ago`;
+            const weeks = Math.floor(days / 7);
+            return `${weeks}w ago`;
+        }
+
         async function loadData() {
             try {
                 const resp = await fetch('data/timing_summary.json');
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 data = await resp.json();
 
-                document.getElementById('last-updated').textContent =
-                    `Updated: ${data.generated_at}`;
+                const updatedEl = document.getElementById('last-updated');
+                updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
+                updatedEl.title = data.generated_at;
 
                 populateJobSelector();
             } catch (err) {
@@ -1419,7 +1436,42 @@
             }
         }
 
+        async function refreshData() {
+            try {
+                const resp = await fetch('data/timing_summary.json');
+                if (!resp.ok) return;
+                const newData = await resp.json();
+
+                // Only update if data actually changed
+                if (newData.generated_at !== data.generated_at) {
+                    data = newData;
+                    const updatedEl = document.getElementById('last-updated');
+                    updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
+                    updatedEl.title = data.generated_at;
+                    updateChart();
+                    updateStatsTable();
+                } else {
+                    // Update the "ago" time even if data hasn't changed
+                    const updatedEl = document.getElementById('last-updated');
+                    updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
+                }
+            } catch (err) {
+                // Silently ignore refresh errors
+            }
+        }
+
         loadData();
+
+        // Auto-refresh data every 5 minutes
+        setInterval(refreshData, 5 * 60 * 1000);
+
+        // Update "ago" time every minute
+        setInterval(() => {
+            if (data?.generated_at) {
+                const updatedEl = document.getElementById('last-updated');
+                updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
+            }
+        }, 60 * 1000);
 
         // Re-render chart when color scheme changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
