@@ -922,11 +922,54 @@
                         x: {
                             type: 'time',
                             time: {
-                                unit: 'day',
-                                displayFormats: { day: 'MMM d' }
+                                displayFormats: {
+                                    day: 'MMM d',
+                                    week: 'MMM d',
+                                    month: 'MMM yyyy'
+                                }
                             },
-                            ticks: { color: textColor, maxTicksLimit: 15, maxRotation: 45 },
-                            grid: { color: gridColor }
+                            ticks: {
+                                color: textColor,
+                                maxRotation: 45,
+                                callback: function(value, index, ticks) {
+                                    const date = new Date(value);
+                                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                    const label = `${months[date.getMonth()]} ${date.getDate()}`;
+                                    // Show year on first tick and when year changes
+                                    if (index === 0) {
+                                        return `${label} '${date.getFullYear().toString().slice(-2)}`;
+                                    }
+                                    const prevDate = index > 0 ? new Date(ticks[index - 1].value) : null;
+                                    if (prevDate && prevDate.getFullYear() !== date.getFullYear()) {
+                                        return `${label} '${date.getFullYear().toString().slice(-2)}`;
+                                    }
+                                    return label;
+                                }
+                            },
+                            grid: { color: gridColor },
+                            afterBuildTicks: (axis) => {
+                                const rangeMs = axis.max - axis.min;
+                                const DAY = 24 * 60 * 60 * 1000;
+                                // Nice intervals: 1w, 2w, 1mo
+                                const niceSteps = [7*DAY, 14*DAY, 30*DAY];
+                                let step = niceSteps.find(s => rangeMs / s <= 12) || 30*DAY;
+
+                                // Round min to start of day
+                                const minDate = new Date(axis.min);
+                                minDate.setHours(0, 0, 0, 0);
+                                let minTick = minDate.getTime();
+                                // Align to week boundary (Sunday)
+                                const dayOfWeek = minDate.getDay();
+                                minTick -= dayOfWeek * DAY;
+                                // Move to first tick after axis.min
+                                while (minTick < axis.min) minTick += step;
+
+                                const ticks = [];
+                                for (let v = minTick; v <= axis.max; v += step) {
+                                    ticks.push({ value: v });
+                                }
+                                if (ticks.length > 0) axis.ticks = ticks;
+                            }
                         },
                         y: {
                             ticks: {
