@@ -5,6 +5,7 @@ using HTTP
 using JSON3
 using Dates
 using Statistics
+using DataStructures: SortedDict
 
 const BUILDKITE_ORG = "julialang"
 const PIPELINE = "julia-master"
@@ -233,9 +234,9 @@ function generate_json_output(job_timings; output_dir="data")
     existing = load_existing_data(output_dir)
     existing_jobs = get(existing, :jobs, Dict())
 
-    summary = Dict{String, Any}()
+    summary = SortedDict{String, Any}()
     summary["generated_at"] = Dates.format(now(UTC), dateformat"yyyy-mm-ddTHH:MM:SSZ")
-    summary["jobs"] = Dict{String, Any}()
+    summary["jobs"] = SortedDict{String, Any}()
 
     # Collect all job names from both sources
     all_job_names = union(keys(job_timings), String.(keys(existing_jobs)))
@@ -244,13 +245,13 @@ function generate_json_output(job_timings; output_dir="data")
         # Start with new data
         new_timings = get(job_timings, name, [])
         new_records = [
-            Dict(
-                "commit" => t.commit,
+            SortedDict(
+                "author" => t.author,
                 "build" => t.build_number,
+                "commit" => t.commit,
                 "date" => Dates.format(t.created_at, dateformat"yyyy-mm-dd HH:MM"),
                 "duration" => round(t.duration_seconds, digits=1),
-                "message" => t.message,
-                "author" => t.author
+                "message" => t.message
             )
             for t in new_timings
         ]
@@ -263,13 +264,13 @@ function generate_json_output(job_timings; output_dir="data")
             for old in existing_recent
                 build = get(old, :build, nothing)
                 if build !== nothing && build ∉ new_builds
-                    push!(new_records, Dict(
-                        "commit" => get(old, :commit, ""),
+                    push!(new_records, SortedDict(
+                        "author" => get(old, :author, ""),
                         "build" => build,
+                        "commit" => get(old, :commit, ""),
                         "date" => get(old, :date, ""),
                         "duration" => get(old, :duration, 0.0),
-                        "message" => get(old, :message, ""),
-                        "author" => get(old, :author, "")
+                        "message" => get(old, :message, "")
                     ))
                 end
             end
@@ -289,16 +290,16 @@ function generate_json_output(job_timings; output_dir="data")
             std = length(durations) > 1 ? std(durations) : 0.0
         )
 
-        summary["jobs"][name] = Dict(
-            "stats" => Dict(
+        summary["jobs"][name] = SortedDict(
+            "recent" => sorted,
+            "stats" => SortedDict(
                 "count" => stats.count,
+                "max_seconds" => round(stats.max, digits=1),
                 "mean_seconds" => round(stats.mean, digits=1),
                 "median_seconds" => round(stats.median, digits=1),
                 "min_seconds" => round(stats.min, digits=1),
-                "max_seconds" => round(stats.max, digits=1),
                 "std_seconds" => round(stats.std, digits=1)
-            ),
-            "recent" => sorted  # Keep all historical data
+            )
         )
     end
 
