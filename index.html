@@ -249,6 +249,9 @@
         }
         .color-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .bk-emoji { height: 1em; width: 1em; vertical-align: -0.1em; display: inline; }
+        .failure-rate { font-size: 9px; color: var(--color-danger-fg); margin-left: auto; padding-left: 6px; white-space: nowrap; }
+        .failure-indicator { color: var(--color-danger-fg); font-size: 9px; margin-left: 2px; }
+        .matrix-cell .failure-indicator { position: absolute; top: 1px; right: 2px; font-size: 8px; }
 
         /* Chart area */
         .content {
@@ -626,6 +629,35 @@
             const hours = Math.floor(mins / 60);
             const remainMins = mins % 60;
             return `${hours}h ${remainMins}m`;
+        }
+
+        // Calculate failure rate for a job over the last N days
+        const FAILURE_RATE_DAYS = 14;
+        const FAILURE_RATE_THRESHOLD = 0.1;  // 10% or higher shows warning
+        const FAILURE_RATE_MIN_RUNS = 3;     // Need at least 3 runs to show warning
+
+        function getJobFailureRate(jobData) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - FAILURE_RATE_DAYS);
+
+            let total = 0, failed = 0;
+            for (const run of jobData.recent) {
+                const date = new Date(run.date);
+                if (date < cutoff) continue;
+                total++;
+                const state = run.state || 'passed';
+                if (['failed', 'timed_out', 'canceled'].includes(state)) failed++;
+            }
+            return { total, failed, rate: total > 0 ? failed / total : 0 };
+        }
+
+        // Cache failure rates for all jobs
+        let jobFailureRates = {};
+        function calculateAllFailureRates() {
+            jobFailureRates = {};
+            for (const [name, job] of Object.entries(data.jobs)) {
+                jobFailureRates[name] = getJobFailureRate(job);
+            }
         }
 
         // URL parameter handling for shareable links
@@ -1012,13 +1044,15 @@
                     datasets.push({
                         label: jobName + ' (points)',
                         data: points.map(p => ({ x: p.x, y: p.y })),
-                        borderColor: 'transparent',
+                        borderColor: color,
                         backgroundColor: color,
                         fill: false,
                         showLine: false,
                         pointRadius: pointRadii,
                         pointHoverRadius: 6,
-                        pointStyle: pointStyles
+                        pointStyle: pointStyles,
+                        pointBorderColor: color,
+                        pointBackgroundColor: color
                     });
                     // Also track metadata for points dataset
                     points.forEach((pt, idx) => {
@@ -1398,6 +1432,9 @@
                 jobColors[name] = colors[i];
             });
 
+            // Calculate failure rates for all jobs
+            calculateAllFailureRates();
+
             // Build matrix table
             const matrixContainer = document.getElementById('job-matrix');
             let html = '<table class="matrix-table">';
@@ -1415,9 +1452,15 @@
                 for (const type of typeOrder) {
                     const jobs = jobMatrix[platform][type];
                     const count = jobs.length;
+                    // Check if any job in this cell has high failure rate
+                    const hasFailure = jobs.some(({ name }) => {
+                        const fr = jobFailureRates[name];
+                        return fr && fr.total >= FAILURE_RATE_MIN_RUNS && fr.rate >= FAILURE_RATE_THRESHOLD;
+                    });
                     html += `<td class="matrix-cell" data-platform="${platform}" data-type="${type}" onclick="toggleMatrixCell('${platform}', '${type}')">`;
                     if (count > 0) {
                         html += `<span class="job-count">${count}</span>`;
+                        if (hasFailure) html += '<span class="failure-indicator">⚠️</span>';
                     } else {
                         html += '-';
                     }
@@ -1433,7 +1476,12 @@
             for (const group of specialGroups) {
                 const jobs = specialJobGroups[group];
                 if (jobs.length > 0) {
-                    html += `<button class="btn" style="font-size:10px; padding:3px 8px;" data-special="${group}" onclick="toggleSpecialGroup('${group}')">${specialLabels[group]} (${jobs.length})</button>`;
+                    const hasFailure = jobs.some(({ name }) => {
+                        const fr = jobFailureRates[name];
+                        return fr && fr.total >= FAILURE_RATE_MIN_RUNS && fr.rate >= FAILURE_RATE_THRESHOLD;
+                    });
+                    const warnIcon = hasFailure ? ' ⚠️' : '';
+                    html += `<button class="btn" style="font-size:10px; padding:3px 8px;" data-special="${group}" onclick="toggleSpecialGroup('${group}')">${specialLabels[group]} (${jobs.length})${warnIcon}</button>`;
                 }
             }
             html += '</div></td></tr>';
@@ -1500,13 +1548,21 @@
 
             for (const { name, job } of allJobsSorted) {
                 const color = jobColors[name];
+                const fr = jobFailureRates[name];
+                const showWarning = fr && fr.total >= FAILURE_RATE_MIN_RUNS && fr.rate >= FAILURE_RATE_THRESHOLD;
                 const item = document.createElement('div');
                 item.className = 'job-item' + (selectedJobs.has(name) ? ' selected' : '');
                 item.dataset.job = name;
                 item.onclick = () => toggleJobItem(item, name);
+                let failureHtml = '';
+                if (showWarning) {
+                    const pct = Math.round(fr.rate * 100);
+                    failureHtml = `<span class="failure-rate" title="${fr.failed}/${fr.total} failed in last ${FAILURE_RATE_DAYS} days">⚠️ ${pct}%</span>`;
+                }
                 item.innerHTML = `
                     <span class="color-dot" style="background: ${color}"></span>
                     <span class="job-name">${convertEmoji(name)}</span>
+                    ${failureHtml}
                     <span class="job-median">${formatDuration(job.stats.median_seconds)}</span>
                 `;
                 listContainer.appendChild(item);
