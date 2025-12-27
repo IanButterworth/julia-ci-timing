@@ -1037,9 +1037,34 @@
                     chartMetadata[`${datasetIdx}-${idx}`] = pt.meta;
                 });
 
+                // Create custom canvas for timed_out marker (⤒) at high DPI
+                const createTimedOutMarker = (fillColor) => {
+                    const scale = window.devicePixelRatio || 2;
+                    const size = 16;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size * scale;
+                    canvas.height = size * scale;
+                    canvas.style.width = size + 'px';
+                    canvas.style.height = size + 'px';
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(scale, scale);
+                    ctx.font = 'bold 13px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillStyle = fillColor;
+                    ctx.fillText('⤒', 8, 6);
+                    return canvas;
+                };
+                const timedOutMarker = createTimedOutMarker(color);
+
                 // Generate point styles based on state
+                const getPointStyle = (state) => {
+                    if (state === 'timed_out') return timedOutMarker;  // ⤒ for timed out
+                    if (state === 'failed' || state === 'canceled') return 'crossRot';  // ✕ for failed
+                    return 'circle';  // ● for passed
+                };
                 const isFailed = (state) => ['failed', 'timed_out', 'canceled'].includes(state);
-                const pointStyles = points.map(p => isFailed(p.state) ? 'crossRot' : 'circle');
+                const pointStyles = points.map(p => getPointStyle(p.state));
                 const pointRadii = points.map(p => isFailed(p.state) ? 5 : 2);
 
                 if (lineType === 'raw') {
@@ -1048,6 +1073,7 @@
                         label: jobName,
                         data: points.map(p => ({ x: p.x, y: p.y })),
                         borderColor: color,
+                        borderWidth: 1.5,
                         backgroundColor: color + '20',
                         fill: false,
                         tension: 0.2,
@@ -1065,6 +1091,7 @@
                         label: jobName,
                         data: smoothedPoints.map(p => ({ x: p.x, y: p.y })),
                         borderColor: color,
+                        borderWidth: 1.5,
                         backgroundColor: color + '20',
                         fill: false,
                         tension: 0.4,
@@ -1142,10 +1169,15 @@
                                     const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
                                     const meta = chartMetadata[key];
                                     if (!meta) return null;
-                                    const isFailed = ['failed', 'timed_out', 'canceled'].includes(meta.state);
-                                    const stateIcon = isFailed ? '❌' : meta.state === 'passed' ? '✓' : '';
+                                    const getStateDisplay = (state) => {
+                                        if (state === 'timed_out') return '⤒ timed out';
+                                        if (state === 'failed') return '❌ failed';
+                                        if (state === 'canceled') return '❌ canceled';
+                                        if (state === 'passed') return '✓ passed';
+                                        return state || '';
+                                    };
                                     const lines = [
-                                        `${stateIcon} ${formatDuration(ctx.parsed.y)}`,
+                                        `${getStateDisplay(meta.state)} · ${formatDuration(ctx.parsed.y)}`,
                                         meta?.message || ''
                                     ];
                                     if (meta?.agent) lines.push(`🖥️ ${meta.agent}`);
