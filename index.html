@@ -471,6 +471,12 @@
             <option value="90">Last 90 days</option>
             <option value="0">All time</option>
         </select>
+        <select class="time-select" id="line-type" onchange="setLineType(this.value)">
+            <option value="raw" selected>Raw data</option>
+            <option value="7">7-day avg</option>
+            <option value="30">30-day avg</option>
+            <option value="90">90-day avg</option>
+        </select>
         <span class="updated" id="last-updated"></span>
         <a href="https://github.com/IanButterworth/julia-ci-timing" target="_blank" class="btn btn-link">GitHub</a>
     </div>
@@ -534,7 +540,9 @@
         let data = null;
         let selectedJobs = new Set();
         let timeRangeDays = 30;  // Default: 30 days
+        let lineType = 'raw';    // Default: raw data (no moving average)
         let jobColors = {};
+        let chartMetadata = {};
 
         // Buildkite emoji mapping - use their actual images
         const BUILDKITE_EMOJI_BASE = 'https://buildkiteassets.com/emojis/img-buildkite-64';
@@ -716,6 +724,12 @@
             } else {
                 url.searchParams.delete('t');
             }
+            // Add line type if not default (raw)
+            if (lineType !== 'raw') {
+                url.searchParams.set('l', lineType);
+            } else {
+                url.searchParams.delete('l');
+            }
             history.replaceState(null, '', url);
         }
 
@@ -730,6 +744,13 @@
                     timeRangeDays = days;
                     document.getElementById('time-range').value = days;
                 }
+            }
+
+            // Apply line type
+            const l = params.get('l');
+            if (l !== null && ['raw', '7', '30', '90'].includes(l)) {
+                lineType = l;
+                document.getElementById('line-type').value = l;
             }
 
             // Apply selection
@@ -753,6 +774,13 @@
 
         function setTimeRange(days) {
             timeRangeDays = parseInt(days, 10);
+            updateChart();
+            updateStatsTable();
+            updateURL();
+        }
+
+        function setLineType(type) {
+            lineType = type;
             updateChart();
             updateURL();
         }
@@ -808,8 +836,35 @@
             return { group: 'other', type: 'other' };
         }
 
-        // Store metadata for chart points
-        let chartMetadata = {};
+        // Compute temporal moving average over windowDays
+        function computeMovingAverage(points, windowDays) {
+            if (points.length === 0) return [];
+            const windowMs = windowDays * 24 * 60 * 60 * 1000;
+            const result = [];
+
+            for (let i = 0; i < points.length; i++) {
+                const centerDate = points[i].x.getTime();
+                const windowStart = centerDate - windowMs / 2;
+                const windowEnd = centerDate + windowMs / 2;
+
+                let sum = 0;
+                let count = 0;
+                for (const pt of points) {
+                    const t = pt.x.getTime();
+                    if (t >= windowStart && t <= windowEnd) {
+                        sum += pt.y;
+                        count++;
+                    }
+                }
+
+                result.push({
+                    x: points[i].x,
+                    y: count > 0 ? sum / count : points[i].y,
+                    meta: points[i].meta
+                });
+            }
+            return result;
+        }
 
         function updateChart() {
             const selectedArray = Array.from(selectedJobs);
@@ -855,23 +910,59 @@
                 // Sort by date
                 points.sort((a, b) => a.x - b.x);
 
-                // Build metadata after sorting
+                // Apply moving average if selected
+                const smoothedPoints = lineType === 'raw' ? points :
+                    computeMovingAverage(points, parseInt(lineType, 10));
+
+                // Build metadata from raw points
                 const datasetIdx = datasets.length;
                 points.forEach((pt, idx) => {
                     chartMetadata[`${datasetIdx}-${idx}`] = pt.meta;
                 });
 
-                datasets.push({
-                    label: jobName,  // Keep raw name, convert only at display time
-                    data: points.map(p => ({ x: p.x, y: p.y })),
-                    borderColor: color,
-                    backgroundColor: color + '20',
-                    fill: false,
-                    tension: 0.2,
-                    pointRadius: 2,
-                    pointHoverRadius: 5,
-                    spanGaps: true
-                });
+                if (lineType === 'raw') {
+                    // Single dataset with line and points
+                    datasets.push({
+                        label: jobName,
+                        data: points.map(p => ({ x: p.x, y: p.y })),
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        fill: false,
+                        tension: 0.2,
+                        pointRadius: 2,
+                        pointHoverRadius: 5,
+                        spanGaps: true
+                    });
+                } else {
+                    // Two datasets: smoothed line + raw points
+                    // Line dataset (no points)
+                    datasets.push({
+                        label: jobName,
+                        data: smoothedPoints.map(p => ({ x: p.x, y: p.y })),
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        spanGaps: true
+                    });
+                    // Points dataset (raw values, no line)
+                    datasets.push({
+                        label: jobName + ' (points)',
+                        data: points.map(p => ({ x: p.x, y: p.y })),
+                        borderColor: 'transparent',
+                        backgroundColor: color,
+                        fill: false,
+                        showLine: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    });
+                    // Also track metadata for points dataset
+                    points.forEach((pt, idx) => {
+                        chartMetadata[`${datasetIdx + 1}-${idx}`] = pt.meta;
+                    });
+                }
             }
 
             if (chart) chart.destroy();
@@ -890,31 +981,54 @@
                     animation: false,
                     interaction: {
                         mode: 'nearest',
-                        intersect: true
+                        intersect: false
                     },
                     plugins: {
                         legend: {
                             display: false
                         },
                         tooltip: {
+                            borderWidth: 3,
+                            borderColor: (ctx) => {
+                                if (ctx.tooltip?.dataPoints?.length > 0) {
+                                    const dp = ctx.tooltip.dataPoints[0];
+                                    // Get the actual line color
+                                    const color = dp.dataset.borderColor !== 'transparent'
+                                        ? dp.dataset.borderColor
+                                        : dp.dataset.backgroundColor;
+                                    return color;
+                                }
+                                return 'transparent';
+                            },
                             callbacks: {
                                 title: (items) => {
                                     if (items.length === 0) return '';
                                     const ctx = items[0];
-                                    return convertEmojiText(ctx.dataset.label);
+                                    // Strip " (points)" suffix from label
+                                    const label = ctx.dataset.label.replace(' (points)', '');
+                                    return convertEmojiText(label);
                                 },
                                 label: (ctx) => {
+                                    // Only show details for point datasets (pointRadius > 0)
+                                    if (ctx.dataset.pointRadius === 0) return null;
                                     const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
                                     const meta = chartMetadata[key];
+                                    if (!meta) return null;
                                     return [
                                         formatDuration(ctx.parsed.y),
                                         meta?.message || ''
                                     ].filter(Boolean);
                                 },
-                                labelColor: (ctx) => ({
-                                    borderColor: ctx.dataset.borderColor,
-                                    backgroundColor: ctx.dataset.borderColor
-                                })
+                                labelColor: (ctx) => {
+                                    // Use actual color (not transparent for points dataset)
+                                    const color = ctx.dataset.backgroundColor !== 'transparent'
+                                        ? ctx.dataset.backgroundColor
+                                        : ctx.dataset.borderColor;
+                                    return {
+                                        borderColor: color,
+                                        backgroundColor: color
+                                    };
+                                }
                             }
                         }
                     },
