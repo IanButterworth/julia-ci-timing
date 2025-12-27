@@ -327,16 +327,35 @@
             min-width: 300px;
             max-width: 420px;
             box-shadow: var(--color-overlay-shadow);
+            position: relative;
         }
+        .popup-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: var(--color-fg-muted);
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        .popup-close:hover { color: var(--color-fg-default); }
         .popup h3 {
             margin: 0 0 12px 0;
             font-size: 14px;
             font-weight: 600;
             color: var(--color-fg-default);
         }
-        .popup-info { font-size: 13px; margin-bottom: 16px; }
+        .popup-info { font-size: 13px; }
         .popup-info div { margin: 6px 0; }
         .popup-info .label { color: var(--color-fg-muted); }
+        .popup-info a {
+            color: var(--color-accent-fg);
+            text-decoration: none;
+        }
+        .popup-info a:hover { text-decoration: underline; }
         .popup-info code {
             font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
             background: var(--color-neutral-muted);
@@ -344,33 +363,7 @@
             border-radius: 6px;
             font-size: 12px;
         }
-        .popup-links { display: flex; gap: 8px; }
-        .popup-links a {
-            flex: 1;
-            padding: 8px 16px;
-            text-align: center;
-            background: var(--color-btn-primary-bg);
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        .popup-links a:hover { background: var(--color-btn-primary-hover-bg); }
-        .popup-links a.secondary {
-            background: var(--color-btn-bg);
-            border: 1px solid var(--color-btn-border);
-            color: var(--color-fg-default);
-        }
-        .popup-links a.secondary:hover { background: var(--color-btn-hover-bg); }
-        .popup-close {
-            position: absolute;
-            top: 8px; right: 10px;
-            background: none; border: none;
-            color: var(--color-fg-muted);
-            font-size: 18px;
-            cursor: pointer;
-        }
+        .popup-info a code:hover { background: var(--color-btn-hover-bg); }
 
         /* Mobile responsive */
         @media (max-width: 768px) {
@@ -477,25 +470,29 @@
             <option value="30">30-day avg</option>
             <option value="90">90-day avg</option>
         </select>
+        <select class="time-select" id="state-filter" onchange="setStateFilter(this.value)">
+            <option value="all" selected>All states</option>
+            <option value="passed">Passed only</option>
+            <option value="failed">Failed only</option>
+        </select>
         <span class="updated" id="last-updated"></span>
         <a href="https://github.com/IanButterworth/julia-ci-timing" target="_blank" class="btn btn-link">GitHub</a>
     </div>
 
     <div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
         <div class="popup" onclick="event.stopPropagation()">
+            <button class="popup-close" onclick="document.getElementById('popup-overlay').classList.remove('visible')">×</button>
             <h3 id="popup-title">Job Details</h3>
             <div class="popup-info">
                 <div><span class="label">Job:</span> <span id="popup-job"></span></div>
+                <div><span class="label">Status:</span> <span id="popup-state"></span></div>
                 <div><span class="label">Duration:</span> <span id="popup-duration"></span></div>
+                <div><span class="label">Agent:</span> <span id="popup-agent"></span></div>
                 <div><span class="label">Date:</span> <span id="popup-date"></span></div>
-                <div><span class="label">Commit:</span> <code id="popup-commit"></code></div>
+                <div><span class="label">Commit:</span> <a id="popup-github-link" href="#" target="_blank"><code id="popup-commit"></code></a></div>
                 <div><span class="label">Title:</span> <span id="popup-message"></span></div>
                 <div><span class="label">Author:</span> <span id="popup-author"></span></div>
-                <div><span class="label">Build:</span> <span id="popup-build"></span></div>
-            </div>
-            <div class="popup-links">
-                <a id="popup-github-link" href="#" target="_blank">GitHub Commit</a>
-                <a id="popup-buildkite-link" href="#" target="_blank" class="secondary">Buildkite Job</a>
+                <div><span class="label">Build:</span> <a id="popup-buildkite-link" href="#" target="_blank"><span id="popup-build"></span></a></div>
             </div>
         </div>
     </div>
@@ -541,6 +538,7 @@
         let selectedJobs = new Set();
         let timeRangeDays = 30;  // Default: 30 days
         let lineType = 'raw';    // Default: raw data (no moving average)
+        let stateFilter = 'all'; // Default: show all states
         let jobColors = {};
         let chartMetadata = {};
 
@@ -730,6 +728,12 @@
             } else {
                 url.searchParams.delete('l');
             }
+            // Add state filter if not default (all)
+            if (stateFilter !== 'all') {
+                url.searchParams.set('f', stateFilter);
+            } else {
+                url.searchParams.delete('f');
+            }
             history.replaceState(null, '', url);
             saveToLocalStorage();
         }
@@ -740,7 +744,8 @@
             const config = {
                 selection: encodeSelection(),
                 timeRange: timeRangeDays,
-                lineType: lineType
+                lineType: lineType,
+                stateFilter: stateFilter
             };
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
@@ -779,6 +784,13 @@
                 document.getElementById('line-type').value = l;
             }
 
+            // Apply state filter
+            const f = params.get('f');
+            if (f !== null && ['all', 'passed', 'failed'].includes(f)) {
+                stateFilter = f;
+                document.getElementById('state-filter').value = f;
+            }
+
             // Apply selection
             const sel = decodeSelection(params.get('s'));
             if (!sel) return false;
@@ -808,6 +820,13 @@
         function setLineType(type) {
             lineType = type;
             updateChart();
+            updateURL();
+        }
+
+        function setStateFilter(state) {
+            stateFilter = state;
+            updateChart();
+            updateStatsTable();
             updateURL();
         }
 
@@ -916,9 +935,15 @@
                 for (const run of jobData.recent) {
                     const date = new Date(run.date);
                     if (cutoff && date < cutoff) continue;  // Filter by time range
+                    // Filter by state
+                    const runState = run.state || 'passed';  // Default for old data
+                    const isFailedState = ['failed', 'timed_out', 'canceled'].includes(runState);
+                    if (stateFilter === 'passed' && runState !== 'passed') continue;
+                    if (stateFilter === 'failed' && !isFailedState) continue;
                     points.push({
                         x: date,
                         y: run.duration,
+                        state: runState,
                         meta: {
                             job: jobName,
                             commit: run.commit,
@@ -926,7 +951,9 @@
                             date: run.date,
                             duration: run.duration,
                             message: run.message,
-                            author: run.author
+                            author: run.author,
+                            state: runState,
+                            agent: run.agent || ''
                         }
                     });
                 }
@@ -946,6 +973,11 @@
                     chartMetadata[`${datasetIdx}-${idx}`] = pt.meta;
                 });
 
+                // Generate point styles based on state
+                const isFailed = (state) => ['failed', 'timed_out', 'canceled'].includes(state);
+                const pointStyles = points.map(p => isFailed(p.state) ? 'crossRot' : 'circle');
+                const pointRadii = points.map(p => isFailed(p.state) ? 5 : 2);
+
                 if (lineType === 'raw') {
                     // Single dataset with line and points
                     datasets.push({
@@ -955,8 +987,11 @@
                         backgroundColor: color + '20',
                         fill: false,
                         tension: 0.2,
-                        pointRadius: 2,
-                        pointHoverRadius: 5,
+                        pointRadius: pointRadii,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: color,
+                        pointBorderColor: color,
+                        pointStyle: pointStyles,
                         spanGaps: true
                     });
                 } else {
@@ -981,8 +1016,9 @@
                         backgroundColor: color,
                         fill: false,
                         showLine: false,
-                        pointRadius: 2,
-                        pointHoverRadius: 5
+                        pointRadius: pointRadii,
+                        pointHoverRadius: 6,
+                        pointStyle: pointStyles
                     });
                     // Also track metadata for points dataset
                     points.forEach((pt, idx) => {
@@ -1040,8 +1076,10 @@
                                     const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
                                     const meta = chartMetadata[key];
                                     if (!meta) return null;
+                                    const isFailed = ['failed', 'timed_out', 'canceled'].includes(meta.state);
+                                    const stateIcon = isFailed ? '❌' : meta.state === 'passed' ? '✓' : '';
                                     return [
-                                        formatDuration(ctx.parsed.y),
+                                        `${stateIcon} ${formatDuration(ctx.parsed.y)}`,
                                         meta?.message || ''
                                     ].filter(Boolean);
                                 },
@@ -1148,7 +1186,16 @@
 
         function showPopup(meta) {
             document.getElementById('popup-job').innerHTML = convertEmoji(meta.job);
+            const state = meta.state || 'passed';
+            const stateEl = document.getElementById('popup-state');
+            const isFailed = ['failed', 'timed_out', 'canceled'].includes(state);
+            const stateIcon = isFailed ? '❌' : '✅';
+            const stateText = state === 'timed_out' ? 'timed out' : state;
+            stateEl.innerHTML = `${stateIcon} ${stateText}`;
+            stateEl.style.color = isFailed ? 'var(--color-danger-fg)' :
+                                  state === 'passed' ? 'var(--color-success-fg)' : 'inherit';
             document.getElementById('popup-duration').textContent = formatDuration(meta.duration);
+            document.getElementById('popup-agent').textContent = meta.agent || '(unknown)';
             document.getElementById('popup-date').textContent = meta.date;
             document.getElementById('popup-commit').textContent = meta.commit;
             document.getElementById('popup-message').textContent = meta.message || '(no message)';
@@ -1194,21 +1241,45 @@
                 return;
             }
 
+            const cutoff = getTimeRangeCutoff();
+
             for (const jobName of selectedArray) {
                 const job = data.jobs[jobName];
                 if (!job) continue;
-                const s = job.stats;
                 const color = jobColors[jobName];
+
+                // Filter data by time range and state
+                const filtered = job.recent.filter(r => {
+                    const date = new Date(r.date);
+                    if (cutoff && date < cutoff) return false;
+                    const runState = r.state || 'passed';
+                    const isFailedState = ['failed', 'timed_out', 'canceled'].includes(runState);
+                    if (stateFilter === 'passed' && runState !== 'passed') return false;
+                    if (stateFilter === 'failed' && !isFailedState) return false;
+                    return true;
+                });
+
+                if (filtered.length === 0) continue;
+
+                // Compute stats from filtered data
+                const durations = filtered.map(r => r.duration);
+                const sorted = [...durations].sort((a, b) => a - b);
+                const median = sorted[Math.floor(sorted.length / 2)];
+                const mean = durations.reduce((a, b) => a + b, 0) / durations.length;
+                const min = Math.min(...durations);
+                const max = Math.max(...durations);
+                const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
+                const std = Math.sqrt(variance);
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
-                    <td class="duration">${formatDuration(s.median_seconds)}</td>
-                    <td class="duration">${formatDuration(s.mean_seconds)}</td>
-                    <td class="duration">${formatDuration(s.min_seconds)}</td>
-                    <td class="duration">${formatDuration(s.max_seconds)}</td>
-                    <td class="duration">±${formatDuration(s.std_seconds)}</td>
-                    <td>${s.count}</td>
+                    <td class="duration">${formatDuration(median)}</td>
+                    <td class="duration">${formatDuration(mean)}</td>
+                    <td class="duration">${formatDuration(min)}</td>
+                    <td class="duration">${formatDuration(max)}</td>
+                    <td class="duration">±${formatDuration(std)}</td>
+                    <td>${filtered.length}</td>
                 `;
                 tbody.appendChild(row);
             }
@@ -1356,7 +1427,7 @@
             }
 
             // Special groups row
-            html += '<tr><th class="row-header" colspan="5" style="text-align:center; padding-top:8px;">Special</th></tr>';
+            html += '<tr><th class="row-header clickable" colspan="5" style="text-align:center; padding-top:8px;" onclick="selectAllSpecial()" title="Toggle all special jobs">Special</th></tr>';
             html += '<tr><td colspan="5" style="padding:0;">';
             html += '<div style="display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:center;">';
             for (const group of specialGroups) {
@@ -1389,6 +1460,11 @@
                     if (stored.lineType && ['raw', '7', '30', '90'].includes(stored.lineType)) {
                         lineType = stored.lineType;
                         document.getElementById('line-type').value = stored.lineType;
+                    }
+                    // Apply stored state filter
+                    if (stored.stateFilter && ['all', 'passed', 'failed'].includes(stored.stateFilter)) {
+                        stateFilter = stored.stateFilter;
+                        document.getElementById('state-filter').value = stored.stateFilter;
                     }
                     // Apply stored selection
                     const sel = decodeSelection(stored.selection);
@@ -1528,6 +1604,29 @@
                     jobs.push(...jobMatrix[platform][type]);
                 }
             }
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+            updateURL();
+        }
+
+        function selectAllSpecial() {
+            const jobs = [];
+            for (const group of specialGroups) {
+                jobs.push(...(specialJobGroups[group] || []));
+            }
+            if (jobs.length === 0) return;
             const allSelected = jobs.every(j => selectedJobs.has(j.name));
             for (const { name } of jobs) {
                 if (allSelected) {

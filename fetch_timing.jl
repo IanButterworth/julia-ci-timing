@@ -38,12 +38,11 @@ function api_get(endpoint; token=get_token(), params=Dict())
     return JSON3.read(resp.body)
 end
 
-function fetch_builds(; branch="master", state="passed", per_page=100, max_pages=30, known_builds=Set{Int}())
+function fetch_builds(; branch="master", per_page=100, max_pages=30, known_builds=Set{Int}())
     builds = []
     for page in 1:max_pages
         params = Dict(
             "branch" => branch,
-            "state" => state,
             "per_page" => per_page,
             "page" => page
         )
@@ -72,12 +71,11 @@ end
 
 const SCHEDULED_PIPELINE = "julia-master-scheduled"
 
-function fetch_scheduled_builds(; branch="master", state="passed", per_page=100, max_pages=10, known_builds=Set{Int}())
+function fetch_scheduled_builds(; branch="master", per_page=100, max_pages=10, known_builds=Set{Int}())
     builds = []
     for page in 1:max_pages
         params = Dict(
             "branch" => branch,
-            "state" => state,
             "per_page" => per_page,
             "page" => page
         )
@@ -127,7 +125,9 @@ function extract_job_timings(builds)
         created_at::DateTime,
         duration_seconds::Float64,
         message::String,
-        author::String
+        author::String,
+        state::String,
+        agent::String
     }}}()
 
     for build in builds
@@ -164,13 +164,26 @@ function extract_job_timings(builds)
             duration = job_duration_seconds(job)
             duration === nothing && continue
 
+            # Get job state (passed, failed, etc.)
+            job_state = String(get(job, :state, "unknown"))
+
+            # Get agent hostname
+            agent_info = get(job, :agent, nothing)
+            agent_hostname = if agent_info !== nothing
+                String(get(agent_info, :hostname, ""))
+            else
+                ""
+            end
+
             entry = (
                 commit = commit,
                 build_number = build_num,
                 created_at = created,
                 duration_seconds = duration,
                 message = message,
-                author = author
+                author = author,
+                state = job_state,
+                agent = agent_hostname
             )
 
             if haskey(job_timings, name)
@@ -245,12 +258,14 @@ function generate_json_output(job_timings; output_dir="data")
         new_timings = get(job_timings, name, [])
         new_records = [
             SortedDict(
+                "agent" => t.agent,
                 "author" => t.author,
                 "build" => t.build_number,
                 "commit" => t.commit,
                 "date" => Dates.format(t.created_at, dateformat"yyyy-mm-dd HH:MM"),
                 "duration" => round(t.duration_seconds, digits=1),
-                "message" => t.message
+                "message" => t.message,
+                "state" => t.state
             )
             for t in new_timings
         ]
@@ -264,12 +279,14 @@ function generate_json_output(job_timings; output_dir="data")
                 build = get(old, :build, nothing)
                 if build !== nothing && build ∉ new_builds
                     push!(new_records, SortedDict(
+                        "agent" => get(old, :agent, ""),
                         "author" => get(old, :author, ""),
                         "build" => build,
                         "commit" => get(old, :commit, ""),
                         "date" => get(old, :date, ""),
                         "duration" => get(old, :duration, 0.0),
-                        "message" => get(old, :message, "")
+                        "message" => get(old, :message, ""),
+                        "state" => get(old, :state, "passed")
                     ))
                 end
             end
