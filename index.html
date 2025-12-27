@@ -276,14 +276,37 @@
         }
 
         /* Stats bar */
+        .stats-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            min-height: 50px;
+            max-height: 70vh;
+        }
+        .resize-handle {
+            height: 6px;
+            background: var(--color-border-default);
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .resize-handle::after {
+            content: '';
+            width: 40px;
+            height: 3px;
+            background: var(--color-fg-muted);
+            border-radius: 2px;
+            opacity: 0.5;
+        }
+        .resize-handle:hover { background: var(--color-neutral-muted); }
+        .resize-handle:hover::after { opacity: 1; }
         .stats-bar {
             display: flex;
             gap: 1px;
             background: var(--color-border-default);
-            border-top: 1px solid var(--color-border-default);
-            flex-shrink: 0;
+            flex: 1;
             font-size: 12px;
-            max-height: 150px;
             overflow-y: auto;
         }
         .stats-bar table {
@@ -438,8 +461,8 @@
                 height: 280px;
             }
 
-            .stats-bar {
-                max-height: none;
+            .stats-wrapper {
+                max-height: 50vh;
             }
             .stats-bar th, .stats-bar td {
                 padding: 4px 8px;
@@ -514,23 +537,27 @@
                     <canvas id="timing-chart"></canvas>
                 </div>
             </div>
-            <div class="stats-bar">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Job</th>
-                            <th>Median</th>
-                            <th>Mean</th>
-                            <th>Min</th>
-                            <th>Max</th>
-                            <th>σ</th>
-                            <th>n</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stats-tbody">
-                        <tr><td colspan="7" class="loading">Loading...</td></tr>
-                    </tbody>
-                </table>
+            <div class="stats-wrapper" id="stats-wrapper" style="height: 150px;">
+                <div class="resize-handle" id="resize-handle"></div>
+                <div class="stats-bar">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Job</th>
+                                <th title="Pass rate in last 14 days">Pass Rate</th>
+                                <th>Median</th>
+                                <th>Mean</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>σ</th>
+                                <th>n</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-tbody">
+                            <tr><td colspan="8" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -540,7 +567,7 @@
         let data = null;
         let selectedJobs = new Set();
         let timeRangeDays = 30;  // Default: 30 days
-        let lineType = 'raw';    // Default: raw data (no moving average)
+        let lineType = '7';      // Default: 7-day moving average
         let stateFilter = 'all'; // Default: show all states
         let jobColors = {};
         let chartMetadata = {};
@@ -631,32 +658,35 @@
             return `${hours}h ${remainMins}m`;
         }
 
-        // Calculate failure rate for a job over the last N days
-        const FAILURE_RATE_DAYS = 14;
-        const FAILURE_RATE_THRESHOLD = 0.1;  // 10% or higher shows warning
-        const FAILURE_RATE_MIN_RUNS = 3;     // Need at least 3 runs to show warning
+        // Calculate pass rate for a job over the last N days
+        const PASS_RATE_DAYS = 14;
+        const PASS_RATE_THRESHOLD = 0.9;  // Below 90% shows warning
+        const PASS_RATE_MIN_RUNS = 3;     // Need at least 3 runs to show warning
 
-        function getJobFailureRate(jobData) {
+        function getJobPassRate(jobData) {
             const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - FAILURE_RATE_DAYS);
+            cutoff.setDate(cutoff.getDate() - PASS_RATE_DAYS);
 
-            let total = 0, failed = 0;
+            let total = 0, passed = 0, failed = 0, timedOut = 0, canceled = 0;
             for (const run of jobData.recent) {
                 const date = new Date(run.date);
                 if (date < cutoff) continue;
                 total++;
                 const state = run.state || 'passed';
-                if (['failed', 'timed_out', 'canceled'].includes(state)) failed++;
+                if (state === 'passed') passed++;
+                else if (state === 'failed') failed++;
+                else if (state === 'timed_out') timedOut++;
+                else if (state === 'canceled') canceled++;
             }
-            return { total, failed, rate: total > 0 ? failed / total : 0 };
+            return { total, passed, failed, timedOut, canceled, rate: total > 0 ? passed / total : 1 };
         }
 
-        // Cache failure rates for all jobs
-        let jobFailureRates = {};
-        function calculateAllFailureRates() {
-            jobFailureRates = {};
+        // Cache pass rates for all jobs
+        let jobPassRates = {};
+        function calculateAllPassRates() {
+            jobPassRates = {};
             for (const [name, job] of Object.entries(data.jobs)) {
-                jobFailureRates[name] = getJobFailureRate(job);
+                jobPassRates[name] = getJobPassRate(job);
             }
         }
 
@@ -773,11 +803,13 @@
         const STORAGE_KEY = 'julia-ci-timing-config';
 
         function saveToLocalStorage() {
+            const statsWrapper = document.getElementById('stats-wrapper');
             const config = {
                 selection: encodeSelection(),
                 timeRange: timeRangeDays,
                 lineType: lineType,
-                stateFilter: stateFilter
+                stateFilter: stateFilter,
+                statsHeight: statsWrapper ? statsWrapper.offsetHeight : 150
             };
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
@@ -1253,6 +1285,60 @@
             }
         }
 
+        // Resizable stats panel
+        (function() {
+            const handle = document.getElementById('resize-handle');
+            const wrapper = document.getElementById('stats-wrapper');
+            let startY, startHeight;
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                startY = e.clientY;
+                startHeight = wrapper.offsetHeight;
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            function onMouseMove(e) {
+                const delta = startY - e.clientY;
+                const newHeight = Math.max(50, Math.min(window.innerHeight * 0.7, startHeight + delta));
+                wrapper.style.height = newHeight + 'px';
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // Save to localStorage
+                saveToLocalStorage();
+            }
+
+            // Touch support
+            handle.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                startY = touch.clientY;
+                startHeight = wrapper.offsetHeight;
+                document.addEventListener('touchmove', onTouchMove);
+                document.addEventListener('touchend', onTouchEnd);
+            });
+
+            function onTouchMove(e) {
+                const touch = e.touches[0];
+                const delta = startY - touch.clientY;
+                const newHeight = Math.max(50, Math.min(window.innerHeight * 0.7, startHeight + delta));
+                wrapper.style.height = newHeight + 'px';
+            }
+
+            function onTouchEnd() {
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+                saveToLocalStorage();
+            }
+        })();
+
         // Close popup on Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -1271,7 +1357,7 @@
             });
 
             if (selectedArray.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="loading">Select jobs to see statistics</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="loading">Select jobs to see statistics</td></tr>';
                 return;
             }
 
@@ -1305,9 +1391,27 @@
                 const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
                 const std = Math.sqrt(variance);
 
+                // Get pass rate info
+                const pr = jobPassRates[jobName];
+                let passRateHtml = '<span style="color: var(--color-fg-muted)">—</span>';
+                if (pr && pr.total > 0) {
+                    const pct = Math.round(pr.rate * 100);
+                    const isLow = pr.total >= PASS_RATE_MIN_RUNS && pr.rate < PASS_RATE_THRESHOLD;
+                    const color = isLow ? 'var(--color-danger-fg)' : (pr.rate < 1 ? 'var(--color-attention-fg)' : 'var(--color-success-fg)');
+                    const icon = isLow ? '⚠️ ' : '';
+                    // Build detailed breakdown
+                    const parts = [];
+                    if (pr.failed > 0) parts.push(`${pr.failed} failed`);
+                    if (pr.timedOut > 0) parts.push(`${pr.timedOut} timed out`);
+                    if (pr.canceled > 0) parts.push(`${pr.canceled} canceled`);
+                    const breakdown = parts.length > 0 ? parts.join(', ') : 'all passed';
+                    passRateHtml = `<span style="color: ${color}" title="${breakdown} out of ${pr.total} in last ${PASS_RATE_DAYS} days">${icon}${pct}%</span>`;
+                }
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
+                    <td>${passRateHtml}</td>
                     <td class="duration">${formatDuration(median)}</td>
                     <td class="duration">${formatDuration(mean)}</td>
                     <td class="duration">${formatDuration(min)}</td>
@@ -1432,8 +1536,8 @@
                 jobColors[name] = colors[i];
             });
 
-            // Calculate failure rates for all jobs
-            calculateAllFailureRates();
+            // Calculate pass rates for all jobs
+            calculateAllPassRates();
 
             // Build matrix table
             const matrixContainer = document.getElementById('job-matrix');
@@ -1452,15 +1556,15 @@
                 for (const type of typeOrder) {
                     const jobs = jobMatrix[platform][type];
                     const count = jobs.length;
-                    // Check if any job in this cell has high failure rate
-                    const hasFailure = jobs.some(({ name }) => {
-                        const fr = jobFailureRates[name];
-                        return fr && fr.total >= FAILURE_RATE_MIN_RUNS && fr.rate >= FAILURE_RATE_THRESHOLD;
+                    // Check if any job in this cell has low pass rate
+                    const hasIssue = jobs.some(({ name }) => {
+                        const pr = jobPassRates[name];
+                        return pr && pr.total >= PASS_RATE_MIN_RUNS && pr.rate < PASS_RATE_THRESHOLD;
                     });
                     html += `<td class="matrix-cell" data-platform="${platform}" data-type="${type}" onclick="toggleMatrixCell('${platform}', '${type}')">`;
                     if (count > 0) {
                         html += `<span class="job-count">${count}</span>`;
-                        if (hasFailure) html += '<span class="failure-indicator">⚠️</span>';
+                        if (hasIssue) html += '<span class="failure-indicator">⚠️</span>';
                     } else {
                         html += '-';
                     }
@@ -1476,11 +1580,11 @@
             for (const group of specialGroups) {
                 const jobs = specialJobGroups[group];
                 if (jobs.length > 0) {
-                    const hasFailure = jobs.some(({ name }) => {
-                        const fr = jobFailureRates[name];
-                        return fr && fr.total >= FAILURE_RATE_MIN_RUNS && fr.rate >= FAILURE_RATE_THRESHOLD;
+                    const hasIssue = jobs.some(({ name }) => {
+                        const pr = jobPassRates[name];
+                        return pr && pr.total >= PASS_RATE_MIN_RUNS && pr.rate < PASS_RATE_THRESHOLD;
                     });
-                    const warnIcon = hasFailure ? ' ⚠️' : '';
+                    const warnIcon = hasIssue ? ' ⚠️' : '';
                     html += `<button class="btn" style="font-size:10px; padding:3px 8px;" data-special="${group}" onclick="toggleSpecialGroup('${group}')">${specialLabels[group]} (${jobs.length})${warnIcon}</button>`;
                 }
             }
@@ -1513,6 +1617,10 @@
                     if (stored.stateFilter && ['all', 'passed', 'failed'].includes(stored.stateFilter)) {
                         stateFilter = stored.stateFilter;
                         document.getElementById('state-filter').value = stored.stateFilter;
+                    }
+                    // Apply stored stats panel height
+                    if (stored.statsHeight && stored.statsHeight >= 50) {
+                        document.getElementById('stats-wrapper').style.height = stored.statsHeight + 'px';
                     }
                     // Apply stored selection
                     const sel = decodeSelection(stored.selection);
@@ -1548,21 +1656,24 @@
 
             for (const { name, job } of allJobsSorted) {
                 const color = jobColors[name];
-                const fr = jobFailureRates[name];
-                const showWarning = fr && fr.total >= FAILURE_RATE_MIN_RUNS && fr.rate >= FAILURE_RATE_THRESHOLD;
+                const pr = jobPassRates[name];
+                const showWarning = pr && pr.total >= PASS_RATE_MIN_RUNS && pr.rate < PASS_RATE_THRESHOLD;
                 const item = document.createElement('div');
                 item.className = 'job-item' + (selectedJobs.has(name) ? ' selected' : '');
                 item.dataset.job = name;
                 item.onclick = () => toggleJobItem(item, name);
-                let failureHtml = '';
+                let passRateHtml = '';
                 if (showWarning) {
-                    const pct = Math.round(fr.rate * 100);
-                    failureHtml = `<span class="failure-rate" title="${fr.failed}/${fr.total} failed in last ${FAILURE_RATE_DAYS} days">⚠️ ${pct}%</span>`;
+                    const pct = Math.round(pr.rate * 100);
+                    const parts = [];
+                    if (pr.failed > 0) parts.push(`${pr.failed} failed`);
+                    if (pr.timedOut > 0) parts.push(`${pr.timedOut} timed out`);
+                    passRateHtml = `<span class="failure-rate" title="${parts.join(', ')} in last ${PASS_RATE_DAYS} days">⚠️ ${pct}%</span>`;
                 }
                 item.innerHTML = `
                     <span class="color-dot" style="background: ${color}"></span>
                     <span class="job-name">${convertEmoji(name)}</span>
-                    ${failureHtml}
+                    ${passRateHtml}
                     <span class="job-median">${formatDuration(job.stats.median_seconds)}</span>
                 `;
                 listContainer.appendChild(item);
