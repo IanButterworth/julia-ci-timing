@@ -228,6 +228,7 @@
             font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
         }
         .color-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .bk-emoji { height: 1em; width: 1em; vertical-align: -0.1em; display: inline; }
 
         /* Chart area */
         .content {
@@ -420,13 +421,17 @@
         let selectedJobs = new Set();
         let jobColors = {};
 
-        // Buildkite emoji mapping
+        // Buildkite emoji mapping - use their actual images
+        const BUILDKITE_EMOJI_BASE = 'https://buildkiteassets.com/emojis/img-buildkite-64';
+        const emojiImageMap = {
+            ':macos:': `${BUILDKITE_EMOJI_BASE}/mac.png`,
+            ':apple:': `${BUILDKITE_EMOJI_BASE}/mac.png`,
+            ':mac:': `${BUILDKITE_EMOJI_BASE}/mac.png`,
+            ':linux:': `${BUILDKITE_EMOJI_BASE}/linux.png`,
+            ':windows:': `${BUILDKITE_EMOJI_BASE}/windows.png`,
+            ':freebsd:': `${BUILDKITE_EMOJI_BASE}/freebsd.png`,
+        };
         const emojiMap = {
-            ':macos:': '🍎',
-            ':apple:': '🍎',
-            ':linux:': '🐧',
-            ':windows:': '🪟',
-            ':freebsd:': '😈',
             ':rocket:': '🚀',
             ':gear:': '⚙️',
             ':package:': '📦',
@@ -441,8 +446,35 @@
             ':zap:': '⚡',
         };
 
+        // Unicode fallbacks for canvas/tooltip contexts that can't render HTML
+        const emojiTextMap = {
+            ':macos:': '🍎',
+            ':apple:': '🍎',
+            ':mac:': '🍎',
+            ':linux:': '🐧',
+            ':windows:': '🪟',
+            ':freebsd:': '😈',
+        };
+
         function convertEmoji(text) {
             let result = text;
+            // First, replace with Buildkite images
+            for (const [code, url] of Object.entries(emojiImageMap)) {
+                result = result.replaceAll(code, `<img src="${url}" alt="${code}" class="bk-emoji">`);
+            }
+            // Then replace remaining emoji codes with unicode
+            for (const [code, emoji] of Object.entries(emojiMap)) {
+                result = result.replaceAll(code, emoji);
+            }
+            return result;
+        }
+
+        // Plain text version for canvas tooltips
+        function convertEmojiText(text) {
+            let result = text;
+            for (const [code, emoji] of Object.entries(emojiTextMap)) {
+                result = result.replaceAll(code, emoji);
+            }
             for (const [code, emoji] of Object.entries(emojiMap)) {
                 result = result.replaceAll(code, emoji);
             }
@@ -563,7 +595,7 @@
                 });
 
                 datasets.push({
-                    label: convertEmoji(jobName),
+                    label: jobName,  // Keep raw name, convert only at display time
                     data: points.map(p => ({ x: p.x, y: p.y })),
                     borderColor: color,
                     backgroundColor: color + '20',
@@ -602,7 +634,7 @@
                                 title: (items) => {
                                     if (items.length === 0) return '';
                                     const ctx = items[0];
-                                    return convertEmoji(ctx.dataset.label);
+                                    return convertEmojiText(ctx.dataset.label);
                                 },
                                 label: (ctx) => {
                                     const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
@@ -762,10 +794,10 @@
         const platformOrder = ['linux', 'macos', 'windows', 'freebsd'];
         const typeOrder = ['build', 'test', 'upload', 'coverage'];
         const platformLabels = {
-            'linux': '🐧 Linux',
-            'macos': '🍎 macOS',
-            'windows': '🪟 Windows',
-            'freebsd': '😈 FreeBSD'
+            'linux': `<img src="${BUILDKITE_EMOJI_BASE}/linux.png" class="bk-emoji"> Linux`,
+            'macos': `<img src="${BUILDKITE_EMOJI_BASE}/mac.png" class="bk-emoji"> macOS`,
+            'windows': `<img src="${BUILDKITE_EMOJI_BASE}/windows.png" class="bk-emoji"> Windows`,
+            'freebsd': `<img src="${BUILDKITE_EMOJI_BASE}/freebsd.png" class="bk-emoji"> FreeBSD`
         };
         const typeLabels = {
             'build': 'Build',
