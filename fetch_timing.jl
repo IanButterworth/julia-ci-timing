@@ -50,7 +50,27 @@ function fetch_builds(; branch="master", state="passed", per_page=100, pages=3)
         data === nothing && break
         isempty(data) && break
         append!(builds, data)
-        @info "Fetched page $page" num_builds=length(data)
+        @info "Fetched page $page (julia-master)" num_builds=length(data)
+    end
+    return builds
+end
+
+const SCHEDULED_PIPELINE = "julia-master-scheduled"
+
+function fetch_scheduled_builds(; branch="master", state="passed", per_page=100, pages=10)
+    builds = []
+    for page in 1:pages
+        params = Dict(
+            "branch" => branch,
+            "state" => state,
+            "per_page" => per_page,
+            "page" => page
+        )
+        data = api_get("organizations/$BUILDKITE_ORG/pipelines/$SCHEDULED_PIPELINE/builds"; params)
+        data === nothing && break
+        isempty(data) && break
+        append!(builds, data)
+        @info "Fetched page $page (julia-master-scheduled)" num_builds=length(data)
     end
     return builds
 end
@@ -254,15 +274,21 @@ end
 function main()
     @info "Fetching builds from Buildkite..."
     builds = fetch_builds(; pages=30)
-    @info "Fetched builds" count=length(builds)
+    @info "Fetched julia-master builds" count=length(builds)
 
-    if isempty(builds)
+    scheduled_builds = fetch_scheduled_builds(; pages=10)
+    @info "Fetched julia-master-scheduled builds" count=length(scheduled_builds)
+
+    all_builds = vcat(builds, scheduled_builds)
+    @info "Total builds" count=length(all_builds)
+
+    if isempty(all_builds)
         @error "No builds fetched - check your token and permissions"
         return 1
     end
 
     @info "Extracting job timings..."
-    job_timings = extract_job_timings(builds)
+    job_timings = extract_job_timings(all_builds)
     @info "Found jobs" count=length(job_timings)
 
     @info "Generating JSON output..."
