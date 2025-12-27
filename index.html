@@ -596,13 +596,18 @@
             return result;
         }
 
-        // Generate distinct colors for jobs
+        // Generate distinct colors for jobs using golden ratio for better distribution
         function generateColors(count) {
             const colors = [];
-            const hueStep = 360 / count;
+            const goldenRatio = 0.618033988749895;
+            let hue = 0;
             for (let i = 0; i < count; i++) {
-                const hue = (i * hueStep + 200) % 360; // Start from blue-ish
-                colors.push(`hsl(${hue}, 70%, 55%)`);
+                // Use golden ratio to spread hues evenly
+                hue = (hue + goldenRatio) % 1;
+                // Vary saturation and lightness slightly for more distinction
+                const saturation = 65 + (i % 3) * 10;  // 65%, 75%, 85%
+                const lightness = 45 + (i % 5) * 5;    // 45%, 50%, 55%, 60%, 65%
+                colors.push(`hsl(${Math.floor(hue * 360)}, ${saturation}%, ${lightness}%)`);
             }
             return colors;
         }
@@ -926,9 +931,24 @@
                         y: {
                             ticks: {
                                 color: textColor,
-                                callback: (v) => formatDuration(v)
+                                callback: (v) => formatDuration(v),
+                                // Use nice intervals: 1m, 2m, 5m, 10m, 15m, 30m, 1h, 2h
+                                autoSkip: true,
+                                maxTicksLimit: 10
                             },
-                            grid: { color: gridColor }
+                            grid: { color: gridColor },
+                            afterBuildTicks: (axis) => {
+                                const range = axis.max - axis.min;
+                                // Pick step size for nice round numbers
+                                const niceSteps = [60, 120, 300, 600, 900, 1800, 3600, 7200];
+                                let step = niceSteps.find(s => range / s <= 10) || 7200;
+                                const minTick = Math.ceil(axis.min / step) * step;
+                                const ticks = [];
+                                for (let v = minTick; v <= axis.max; v += step) {
+                                    ticks.push({ value: v });
+                                }
+                                axis.ticks = ticks;
+                            }
                         }
                     },
                     onClick: (evt, elements) => {
