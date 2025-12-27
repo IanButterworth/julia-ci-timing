@@ -1521,6 +1521,30 @@
             updateURL();
         }
 
+        function selectAllMatrix() {
+            const jobs = [];
+            for (const platform of platformOrder) {
+                for (const type of typeOrder) {
+                    jobs.push(...jobMatrix[platform][type]);
+                }
+            }
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+            syncJobListUI();
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+            updateURL();
+        }
+
         function selectByType(type) {
             const jobs = [];
             for (const platform of platformOrder) {
