@@ -731,6 +731,32 @@
                 url.searchParams.delete('l');
             }
             history.replaceState(null, '', url);
+            saveToLocalStorage();
+        }
+
+        const STORAGE_KEY = 'julia-ci-timing-config';
+
+        function saveToLocalStorage() {
+            const config = {
+                selection: encodeSelection(),
+                timeRange: timeRangeDays,
+                lineType: lineType
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            } catch (e) {
+                // Ignore storage errors
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (!stored) return null;
+                return JSON.parse(stored);
+            } catch (e) {
+                return null;
+            }
         }
 
         function applyURLParams() {
@@ -1306,7 +1332,7 @@
             let html = '<table class="matrix-table">';
 
             // Header row
-            html += '<tr><th class="matrix-corner"></th>';
+            html += '<tr><th class="matrix-corner clickable" onclick="selectAllMatrix()" title="Select all matrix jobs"></th>';
             for (const type of typeOrder) {
                 html += `<th class="clickable" onclick="selectByType('${type}')">${typeLabels[type]}</th>`;
             }
@@ -1348,14 +1374,45 @@
             const listContainer = document.getElementById('job-list');
             listContainer.innerHTML = '';
 
-            // Apply URL params (selection and time range) or default to all
+            // Apply URL params (selection and time range) or localStorage or default
             const hasURLSelection = applyURLParams();
             if (!hasURLSelection) {
-                // Select all platform jobs by default, but not special groups
-                for (const platform of platformOrder) {
-                    for (const type of typeOrder) {
-                        for (const { name } of (jobMatrix[platform]?.[type] || [])) {
-                            selectedJobs.add(name);
+                // Try localStorage
+                const stored = loadFromLocalStorage();
+                if (stored) {
+                    // Apply stored time range
+                    if (stored.timeRange !== undefined && [0, 7, 14, 30, 60, 90].includes(stored.timeRange)) {
+                        timeRangeDays = stored.timeRange;
+                        document.getElementById('time-range').value = stored.timeRange;
+                    }
+                    // Apply stored line type
+                    if (stored.lineType && ['raw', '7', '30', '90'].includes(stored.lineType)) {
+                        lineType = stored.lineType;
+                        document.getElementById('line-type').value = stored.lineType;
+                    }
+                    // Apply stored selection
+                    const sel = decodeSelection(stored.selection);
+                    if (sel && (sel.matrix.length > 0 || sel.special.length > 0 || sel.indices.length > 0)) {
+                        for (const { platform, type } of sel.matrix) {
+                            const jobs = jobMatrix[platform]?.[type] || [];
+                            for (const { name } of jobs) selectedJobs.add(name);
+                        }
+                        for (const group of sel.special) {
+                            const jobs = specialJobGroups[group] || [];
+                            for (const { name } of jobs) selectedJobs.add(name);
+                        }
+                        for (const idx of sel.indices) {
+                            if (jobNameList[idx]) selectedJobs.add(jobNameList[idx]);
+                        }
+                    }
+                }
+                // If still nothing selected, select all platform jobs by default
+                if (selectedJobs.size === 0) {
+                    for (const platform of platformOrder) {
+                        for (const type of typeOrder) {
+                            for (const { name } of (jobMatrix[platform]?.[type] || [])) {
+                                selectedJobs.add(name);
+                            }
                         }
                     }
                 }
