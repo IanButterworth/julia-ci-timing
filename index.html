@@ -482,11 +482,11 @@
     </style>
 </head>
 <body>
-    <div class="toolbar">
+    <div class="toolbar" role="toolbar" aria-label="Dashboard controls">
         <h1><img src="https://raw.githubusercontent.com/JuliaLang/julia-logo-graphics/master/images/julia-dots.svg" alt="Julia" class="julia-logo"><a href="https://github.com/JuliaLang" target="_blank" style="color: var(--color-fg-muted); text-decoration: none; font-weight: 400;">JuliaLang</a> / <a href="https://github.com/JuliaLang/julia" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">julia</a> <span style="color: var(--color-fg-muted); font-weight: 300;">|</span> CI Timing</h1>
-        <button class="btn" id="btn-all" onclick="selectAllJobs()">All</button>
-        <button class="btn" id="btn-none" onclick="deselectAllJobs()">None</button>
-        <select class="time-select" id="time-range" onchange="setTimeRange(this.value)">
+        <button class="btn" id="btn-all" onclick="selectAllJobs()" aria-label="Select all jobs">All</button>
+        <button class="btn" id="btn-none" onclick="deselectAllJobs()" aria-label="Deselect all jobs">None</button>
+        <select class="time-select" id="time-range" onchange="setTimeRange(this.value)" aria-label="Time range">
             <option value="7">Last 7 days</option>
             <option value="14">Last 14 days</option>
             <option value="30" selected>Last 30 days</option>
@@ -494,24 +494,24 @@
             <option value="90">Last 90 days</option>
             <option value="0">All time</option>
         </select>
-        <select class="time-select" id="line-type" onchange="setLineType(this.value)">
+        <select class="time-select" id="line-type" onchange="setLineType(this.value)" aria-label="Line type">
             <option value="raw">Raw data</option>
             <option value="7" selected>7-day avg</option>
             <option value="30">30-day avg</option>
             <option value="90">90-day avg</option>
         </select>
-        <select class="time-select" id="state-filter" onchange="setStateFilter(this.value)">
+        <select class="time-select" id="state-filter" onchange="setStateFilter(this.value)" aria-label="State filter">
             <option value="all" selected>All states</option>
             <option value="passed">Passed only</option>
             <option value="failed">Failed only</option>
         </select>
-        <span class="updated" id="last-updated"></span>
-        <a href="https://github.com/IanButterworth/julia-ci-timing" target="_blank" class="btn btn-link">GitHub</a>
+        <span class="updated" id="last-updated" aria-live="polite"></span>
+        <a href="https://github.com/IanButterworth/julia-ci-timing" target="_blank" class="btn btn-link" aria-label="View source on GitHub">GitHub</a>
     </div>
 
-    <div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+    <div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)" role="dialog" aria-modal="true" aria-labelledby="popup-title">
         <div class="popup" onclick="event.stopPropagation()">
-            <button class="popup-close" onclick="document.getElementById('popup-overlay').classList.remove('visible')">×</button>
+            <button class="popup-close" onclick="document.getElementById('popup-overlay').classList.remove('visible')" aria-label="Close dialog">×</button>
             <h3 id="popup-title">Job Details</h3>
             <div class="popup-info">
                 <div><span class="label">Job:</span> <span id="popup-job"></span></div>
@@ -527,34 +527,34 @@
         </div>
     </div>
 
-    <div class="main">
-        <div class="sidebar">
-            <div class="job-matrix" id="job-matrix"></div>
+    <main class="main">
+        <aside class="sidebar" aria-label="Job selection">
+            <div class="job-matrix" id="job-matrix" role="grid" aria-label="Platform and test type matrix"></div>
             <div class="job-list-section">
                 <div class="job-list-header">Jobs (<span id="job-count">0/0</span>)</div>
-                <div class="job-list" id="job-list"></div>
+                <div class="job-list" id="job-list" role="listbox" aria-label="Available jobs"></div>
             </div>
-        </div>
+        </aside>
         <div class="content">
             <div class="chart-container">
                 <div class="chart-wrapper">
-                    <canvas id="timing-chart"></canvas>
+                    <canvas id="timing-chart" role="img" aria-label="CI timing chart"></canvas>
                 </div>
             </div>
             <div class="stats-wrapper" id="stats-wrapper" style="height: 150px;">
-                <div class="resize-handle" id="resize-handle"></div>
+                <div class="resize-handle" id="resize-handle" role="separator" aria-orientation="horizontal" aria-label="Resize stats panel"></div>
                 <div class="stats-bar">
-                    <table>
+                    <table role="table" aria-label="Job statistics">
                         <thead>
                             <tr>
-                                <th>Job</th>
-                                <th title="Pass rate in last 14 days">Pass Rate</th>
-                                <th>Median</th>
-                                <th>Mean</th>
-                                <th>Min</th>
-                                <th>Max</th>
-                                <th>σ</th>
-                                <th>n</th>
+                                <th scope="col">Job</th>
+                                <th scope="col" title="Pass rate in last 14 days">Pass Rate</th>
+                                <th scope="col">Median</th>
+                                <th scope="col">Mean</th>
+                                <th scope="col">Min</th>
+                                <th scope="col">Max</th>
+                                <th scope="col">σ</th>
+                                <th scope="col">n</th>
                             </tr>
                         </thead>
                         <tbody id="stats-tbody">
@@ -564,17 +564,56 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
+        'use strict';
+
+        // === Constants ===
+        const FAILED_STATES = ['failed', 'timed_out', 'canceled'];
+        const VALID_TIME_RANGES = [0, 7, 14, 30, 60, 90];
+        const VALID_LINE_TYPES = ['raw', '7', '30', '90'];
+        const VALID_STATE_FILTERS = ['all', 'passed', 'failed'];
+        const DEFAULT_TIME_RANGE = 30;
+        const DEFAULT_LINE_TYPE = '7';
+        const DEFAULT_STATE_FILTER = 'all';
+        const STORAGE_KEY = 'julia-ci-timing-config';
+        const DATA_REFRESH_INTERVAL = 5 * 60 * 1000;  // 5 minutes
+        const AGO_UPDATE_INTERVAL = 60 * 1000;        // 1 minute
+
+        // === State ===
         let chart = null;
         let data = null;
         let selectedJobs = new Set();
-        let timeRangeDays = 30;  // Default: 30 days
-        let lineType = '7';      // Default: 7-day moving average
-        let stateFilter = 'all'; // Default: show all states
+        let timeRangeDays = DEFAULT_TIME_RANGE;
+        let lineType = DEFAULT_LINE_TYPE;
+        let stateFilter = DEFAULT_STATE_FILTER;
         let jobColors = {};
         let chartMetadata = {};
+
+        // === Helper Functions ===
+        const isFailedState = (state) => FAILED_STATES.includes(state);
+        const getRunState = (run) => run.state || 'passed';
+
+        function refreshAllUI() {
+            updateMatrixHighlights();
+            updateJobCount();
+            updateChart();
+            updateStatsTable();
+            updateToolbarButtons();
+        }
+
+        function toggleJobsSelection(jobs) {
+            if (jobs.length === 0) return;
+            const allSelected = jobs.every(j => selectedJobs.has(j.name));
+            for (const { name } of jobs) {
+                if (allSelected) {
+                    selectedJobs.delete(name);
+                } else {
+                    selectedJobs.add(name);
+                }
+            }
+        }
 
         // Buildkite emoji mapping - use their actual images
         const BUILDKITE_EMOJI_BASE = 'https://buildkiteassets.com/emojis/img-buildkite-64';
@@ -660,6 +699,17 @@
             const hours = Math.floor(mins / 60);
             const remainMins = mins % 60;
             return `${hours}h ${remainMins}m`;
+        }
+
+        function filterRunsByState(runs, cutoff) {
+            return runs.filter(r => {
+                const date = new Date(r.date);
+                if (cutoff && date < cutoff) return false;
+                const runState = getRunState(r);
+                if (stateFilter === 'passed' && runState !== 'passed') return false;
+                if (stateFilter === 'failed' && !isFailedState(runState)) return false;
+                return true;
+            });
         }
 
         // Calculate pass rate for a job over the last N days
@@ -782,20 +832,20 @@
             } else {
                 url.searchParams.delete('s');
             }
-            // Add time range if not default (30)
-            if (timeRangeDays !== 30) {
+            // Add time range if not default
+            if (timeRangeDays !== DEFAULT_TIME_RANGE) {
                 url.searchParams.set('t', timeRangeDays);
             } else {
                 url.searchParams.delete('t');
             }
-            // Add line type if not default (raw)
+            // Add line type if not default
             if (lineType !== 'raw') {
                 url.searchParams.set('l', lineType);
             } else {
                 url.searchParams.delete('l');
             }
-            // Add state filter if not default (all)
-            if (stateFilter !== 'all') {
+            // Add state filter if not default
+            if (stateFilter !== DEFAULT_STATE_FILTER) {
                 url.searchParams.set('f', stateFilter);
             } else {
                 url.searchParams.delete('f');
@@ -803,8 +853,6 @@
             history.replaceState(null, '', url);
             saveToLocalStorage();
         }
-
-        const STORAGE_KEY = 'julia-ci-timing-config';
 
         function saveToLocalStorage() {
             const statsWrapper = document.getElementById('stats-wrapper');
@@ -839,7 +887,7 @@
             const t = params.get('t');
             if (t !== null) {
                 const days = parseInt(t, 10);
-                if (!isNaN(days) && [0, 7, 14, 30, 60, 90].includes(days)) {
+                if (!isNaN(days) && VALID_TIME_RANGES.includes(days)) {
                     timeRangeDays = days;
                     document.getElementById('time-range').value = days;
                 }
@@ -847,14 +895,14 @@
 
             // Apply line type
             const l = params.get('l');
-            if (l !== null && ['raw', '7', '30', '90'].includes(l)) {
+            if (l !== null && VALID_LINE_TYPES.includes(l)) {
                 lineType = l;
                 document.getElementById('line-type').value = l;
             }
 
             // Apply state filter
             const f = params.get('f');
-            if (f !== null && ['all', 'passed', 'failed'].includes(f)) {
+            if (f !== null && VALID_STATE_FILTERS.includes(f)) {
                 stateFilter = f;
                 document.getElementById('state-filter').value = f;
             }
@@ -1002,12 +1050,10 @@
 
                 for (const run of jobData.recent) {
                     const date = new Date(run.date);
-                    if (cutoff && date < cutoff) continue;  // Filter by time range
-                    // Filter by state
-                    const runState = run.state || 'passed';  // Default for old data
-                    const isFailedState = ['failed', 'timed_out', 'canceled'].includes(runState);
+                    if (cutoff && date < cutoff) continue;
+                    const runState = getRunState(run);
                     if (stateFilter === 'passed' && runState !== 'passed') continue;
-                    if (stateFilter === 'failed' && !isFailedState) continue;
+                    if (stateFilter === 'failed' && !isFailedState(runState)) continue;
                     points.push({
                         x: date,
                         y: run.duration,
@@ -1063,13 +1109,12 @@
 
                 // Generate point styles based on state
                 const getPointStyle = (state) => {
-                    if (state === 'timed_out') return timedOutMarker;  // ⤒ for timed out
-                    if (state === 'failed' || state === 'canceled') return 'crossRot';  // ✕ for failed
-                    return 'circle';  // ● for passed
+                    if (state === 'timed_out') return timedOutMarker;
+                    if (state === 'failed' || state === 'canceled') return 'crossRot';
+                    return 'circle';
                 };
-                const isFailed = (state) => ['failed', 'timed_out', 'canceled'].includes(state);
                 const pointStyles = points.map(p => getPointStyle(p.state));
-                const pointRadii = points.map(p => isFailed(p.state) ? 5 : 2);
+                const pointRadii = points.map(p => isFailedState(p.state) ? 5 : 2);
 
                 if (lineType === 'raw') {
                     // Single dataset with line and points
@@ -1182,7 +1227,7 @@
                                     };
                                     const lines = [
                                         `${getStateDisplay(meta.state)} · ${formatDuration(ctx.parsed.y)}`,
-                                        meta?.message || ''
+                                        meta.message || ''
                                     ];
                                     if (meta?.agent) lines.push(`🖥️ ${meta.agent}`);
                                     return lines.filter(Boolean);
@@ -1292,11 +1337,11 @@
             document.getElementById('popup-job').innerHTML = convertEmoji(meta.job);
             const state = meta.state || 'passed';
             const stateEl = document.getElementById('popup-state');
-            const isFailed = ['failed', 'timed_out', 'canceled'].includes(state);
-            const stateIcon = isFailed ? '❌' : '✅';
+            const failed = isFailedState(state);
+            const stateIcon = failed ? '❌' : '✅';
             const stateText = state === 'timed_out' ? 'timed out' : state;
             stateEl.innerHTML = `${stateIcon} ${stateText}`;
-            stateEl.style.color = isFailed ? 'var(--color-danger-fg)' :
+            stateEl.style.color = failed ? 'var(--color-danger-fg)' :
                                   state === 'passed' ? 'var(--color-success-fg)' : 'inherit';
             document.getElementById('popup-duration').textContent = formatDuration(meta.duration);
             document.getElementById('popup-agent').textContent = meta.agent || '(unknown)';
@@ -1406,16 +1451,7 @@
                 if (!job) continue;
                 const color = jobColors[jobName];
 
-                // Filter data by time range and state
-                const filtered = job.recent.filter(r => {
-                    const date = new Date(r.date);
-                    if (cutoff && date < cutoff) return false;
-                    const runState = r.state || 'passed';
-                    const isFailedState = ['failed', 'timed_out', 'canceled'].includes(runState);
-                    if (stateFilter === 'passed' && runState !== 'passed') return false;
-                    if (stateFilter === 'failed' && !isFailedState) return false;
-                    return true;
-                });
+                const filtered = filterRunsByState(job.recent, cutoff);
 
                 if (filtered.length === 0) continue;
 
@@ -1469,11 +1505,7 @@
                 selectedJobs.add(jobName);
                 item.classList.add('selected');
             }
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1489,22 +1521,14 @@
                 selectedJobs.add(name);
             }
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
         function deselectAllJobs() {
             selectedJobs.clear();
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1717,11 +1741,7 @@
                 listContainer.appendChild(item);
             }
 
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
         }
 
         function updateMatrixHighlights() {
@@ -1760,23 +1780,9 @@
         }
 
         function toggleMatrixCell(platform, type) {
-            const jobs = jobMatrix[platform][type];
-            if (jobs.length === 0) return;
-
-            const allSelected = jobs.every(j => selectedJobs.has(j.name));
-            for (const { name } of jobs) {
-                if (allSelected) {
-                    selectedJobs.delete(name);
-                } else {
-                    selectedJobs.add(name);
-                }
-            }
+            toggleJobsSelection(jobMatrix[platform][type]);
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1785,20 +1791,9 @@
             for (const type of typeOrder) {
                 jobs.push(...jobMatrix[platform][type]);
             }
-            const allSelected = jobs.every(j => selectedJobs.has(j.name));
-            for (const { name } of jobs) {
-                if (allSelected) {
-                    selectedJobs.delete(name);
-                } else {
-                    selectedJobs.add(name);
-                }
-            }
+            toggleJobsSelection(jobs);
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1809,20 +1804,9 @@
                     jobs.push(...jobMatrix[platform][type]);
                 }
             }
-            const allSelected = jobs.every(j => selectedJobs.has(j.name));
-            for (const { name } of jobs) {
-                if (allSelected) {
-                    selectedJobs.delete(name);
-                } else {
-                    selectedJobs.add(name);
-                }
-            }
+            toggleJobsSelection(jobs);
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1831,21 +1815,9 @@
             for (const group of specialGroups) {
                 jobs.push(...(specialJobGroups[group] || []));
             }
-            if (jobs.length === 0) return;
-            const allSelected = jobs.every(j => selectedJobs.has(j.name));
-            for (const { name } of jobs) {
-                if (allSelected) {
-                    selectedJobs.delete(name);
-                } else {
-                    selectedJobs.add(name);
-                }
-            }
+            toggleJobsSelection(jobs);
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1854,41 +1826,16 @@
             for (const platform of platformOrder) {
                 jobs.push(...jobMatrix[platform][type]);
             }
-            const allSelected = jobs.every(j => selectedJobs.has(j.name));
-            for (const { name } of jobs) {
-                if (allSelected) {
-                    selectedJobs.delete(name);
-                } else {
-                    selectedJobs.add(name);
-                }
-            }
+            toggleJobsSelection(jobs);
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
         function toggleSpecialGroup(group) {
-            const jobs = specialJobGroups[group];
-            if (jobs.length === 0) return;
-
-            const allSelected = jobs.every(j => selectedJobs.has(j.name));
-            for (const { name } of jobs) {
-                if (allSelected) {
-                    selectedJobs.delete(name);
-                } else {
-                    selectedJobs.add(name);
-                }
-            }
+            toggleJobsSelection(specialJobGroups[group]);
             syncJobListUI();
-            updateMatrixHighlights();
-            updateJobCount();
-            updateChart();
-            updateStatsTable();
-            updateToolbarButtons();
+            refreshAllUI();
             updateURL();
         }
 
@@ -1961,16 +1908,16 @@
 
         loadData();
 
-        // Auto-refresh data every 5 minutes
-        setInterval(refreshData, 5 * 60 * 1000);
+        // Auto-refresh data periodically
+        setInterval(refreshData, DATA_REFRESH_INTERVAL);
 
-        // Update "ago" time every minute
+        // Update "ago" time periodically
         setInterval(() => {
             if (data?.generated_at) {
                 const updatedEl = document.getElementById('last-updated');
                 updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
             }
-        }, 60 * 1000);
+        }, AGO_UPDATE_INTERVAL);
 
         // Re-render chart when color scheme changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
