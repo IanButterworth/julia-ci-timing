@@ -1144,10 +1144,12 @@
                                     if (!meta) return null;
                                     const isFailed = ['failed', 'timed_out', 'canceled'].includes(meta.state);
                                     const stateIcon = isFailed ? '❌' : meta.state === 'passed' ? '✓' : '';
-                                    return [
+                                    const lines = [
                                         `${stateIcon} ${formatDuration(ctx.parsed.y)}`,
                                         meta?.message || ''
-                                    ].filter(Boolean);
+                                    ];
+                                    if (meta?.agent) lines.push(`🖥️ ${meta.agent}`);
+                                    return lines.filter(Boolean);
                                 },
                                 labelColor: (ctx) => {
                                     // Use actual color (not transparent for points dataset)
