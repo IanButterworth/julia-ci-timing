@@ -115,6 +115,15 @@
         }
         .btn:hover { background: var(--color-btn-hover-bg); }
         .btn-link { text-decoration: none; }
+        .time-select {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: var(--color-btn-bg);
+            border: 1px solid var(--color-btn-border);
+            border-radius: 6px;
+            color: var(--color-fg-default);
+            cursor: pointer;
+        }
         .btn.primary {
             background: var(--color-btn-primary-bg);
             border-color: var(--color-btn-primary-border);
@@ -182,14 +191,14 @@
             color: var(--color-fg-muted);
         }
         .matrix-cell.has-selection {
-            background: var(--color-accent-emphasis);
+            background: var(--color-btn-primary-bg);
             color: #fff;
         }
         .matrix-cell.has-selection .job-count {
             color: rgba(255,255,255,0.8);
         }
         .matrix-cell.partial-selection {
-            background: rgba(31, 136, 61, 0.3);
+            background: rgba(31, 136, 61, 0.25);
         }
         .matrix-corner {
             cursor: default;
@@ -369,6 +378,14 @@
         <h1><img src="https://raw.githubusercontent.com/JuliaLang/julia-logo-graphics/master/images/julia-dots.svg" alt="Julia" class="julia-logo">Julia CI Timing</h1>
         <button class="btn" id="btn-all" onclick="selectAllJobs()">All</button>
         <button class="btn" id="btn-none" onclick="deselectAllJobs()">None</button>
+        <select class="time-select" id="time-range" onchange="setTimeRange(this.value)">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="60">Last 60 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="0">All time</option>
+        </select>
         <span class="updated" id="last-updated"></span>
         <a href="https://github.com/IanButterworth/julia-ci-timing" target="_blank" class="btn btn-link">GitHub</a>
     </div>
@@ -431,6 +448,7 @@
         let chart = null;
         let data = null;
         let selectedJobs = new Set();
+        let timeRangeDays = 30;  // Default: 30 days
         let jobColors = {};
 
         // Buildkite emoji mapping - use their actual images
@@ -514,6 +532,148 @@
             return `${hours}h ${remainMins}m`;
         }
 
+        // URL parameter handling for shareable links
+        const urlCodes = {
+            // Platform codes
+            'linux': 'l', 'macos': 'm', 'windows': 'w', 'freebsd': 'f',
+            // Type codes
+            'build': 'b', 'test': 't', 'upload': 'u', 'coverage': 'c',
+            // Special group codes
+            'juliasyntax': 'js', 'docs': 'd', 'special': 'sp', 'pipeline': 'p', 'upload-results': 'ur', 'other': 'o'
+        };
+        const urlCodesReverse = Object.fromEntries(Object.entries(urlCodes).map(([k, v]) => [v, k]));
+
+        // Job index mapping for URL encoding (built after data loads)
+        let jobIndexMap = {};  // name -> index
+        let jobNameList = [];  // index -> name
+
+        function buildJobIndex() {
+            jobNameList = Object.keys(data.jobs).sort();
+            jobIndexMap = {};
+            jobNameList.forEach((name, i) => jobIndexMap[name] = i);
+        }
+
+        function encodeSelection() {
+            const parts = [];
+            const coveredJobs = new Set();
+
+            // Encode matrix cells that are fully selected
+            for (const platform of platformOrder) {
+                for (const type of typeOrder) {
+                    const jobs = jobMatrix[platform]?.[type] || [];
+                    if (jobs.length > 0 && jobs.every(j => selectedJobs.has(j.name))) {
+                        parts.push(urlCodes[platform] + urlCodes[type]);
+                        jobs.forEach(j => coveredJobs.add(j.name));
+                    }
+                }
+            }
+            // Encode special groups that are fully selected
+            for (const group of specialGroups) {
+                const jobs = specialJobGroups[group] || [];
+                if (jobs.length > 0 && jobs.every(j => selectedJobs.has(j.name))) {
+                    parts.push(urlCodes[group]);
+                    jobs.forEach(j => coveredJobs.add(j.name));
+                }
+            }
+
+            // Encode remaining individual jobs by index
+            const individualIndices = [];
+            for (const name of selectedJobs) {
+                if (!coveredJobs.has(name) && jobIndexMap[name] !== undefined) {
+                    individualIndices.push(jobIndexMap[name]);
+                }
+            }
+            if (individualIndices.length > 0) {
+                parts.push('i' + individualIndices.sort((a, b) => a - b).join('_'));
+            }
+
+            return parts.join('.');
+        }
+
+        function decodeSelection(param) {
+            if (!param) return null;
+            const selections = { matrix: [], special: [], indices: [] };
+            for (const part of param.split('.')) {
+                if (part.startsWith('i')) {
+                    // Individual job indices: i0_5_12
+                    const indices = part.slice(1).split('_').map(Number).filter(n => !isNaN(n));
+                    selections.indices.push(...indices);
+                } else if (part.length === 2 && urlCodesReverse[part[0]] && urlCodesReverse[part[1]]) {
+                    // Matrix cell: e.g., "lb" = linux-build
+                    const platform = urlCodesReverse[part[0]];
+                    const type = urlCodesReverse[part[1]];
+                    if (platform && type) selections.matrix.push({ platform, type });
+                } else {
+                    // Special group
+                    const group = urlCodesReverse[part];
+                    if (group) selections.special.push(group);
+                }
+            }
+            return selections;
+        }
+
+        function updateURL() {
+            const encoded = encodeSelection();
+            const url = new URL(window.location);
+            if (encoded) {
+                url.searchParams.set('s', encoded);
+            } else {
+                url.searchParams.delete('s');
+            }
+            // Add time range if not default (30)
+            if (timeRangeDays !== 30) {
+                url.searchParams.set('t', timeRangeDays);
+            } else {
+                url.searchParams.delete('t');
+            }
+            history.replaceState(null, '', url);
+        }
+
+        function applyURLParams() {
+            const params = new URLSearchParams(window.location.search);
+
+            // Apply time range
+            const t = params.get('t');
+            if (t !== null) {
+                const days = parseInt(t, 10);
+                if (!isNaN(days) && [0, 7, 14, 30, 60, 90].includes(days)) {
+                    timeRangeDays = days;
+                    document.getElementById('time-range').value = days;
+                }
+            }
+
+            // Apply selection
+            const sel = decodeSelection(params.get('s'));
+            if (!sel) return false;
+
+            selectedJobs.clear();
+            for (const { platform, type } of sel.matrix) {
+                const jobs = jobMatrix[platform]?.[type] || [];
+                for (const { name } of jobs) selectedJobs.add(name);
+            }
+            for (const group of sel.special) {
+                const jobs = specialJobGroups[group] || [];
+                for (const { name } of jobs) selectedJobs.add(name);
+            }
+            for (const idx of sel.indices) {
+                if (jobNameList[idx]) selectedJobs.add(jobNameList[idx]);
+            }
+            return sel.matrix.length > 0 || sel.special.length > 0 || sel.indices.length > 0;
+        }
+
+        function setTimeRange(days) {
+            timeRangeDays = parseInt(days, 10);
+            updateChart();
+            updateURL();
+        }
+
+        function getTimeRangeCutoff() {
+            if (timeRangeDays === 0) return null;  // All time
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - timeRangeDays);
+            return cutoff;
+        }
+
         function classifyJob(name) {
             const lower = name.toLowerCase();
             if (lower.includes('juliasyntax')) return { group: 'juliasyntax', type: 'test' };
@@ -573,6 +733,7 @@
             // Build datasets and metadata
             const datasets = [];
             chartMetadata = {};
+            const cutoff = getTimeRangeCutoff();
 
             for (const jobName of selectedArray) {
                 const jobData = data.jobs[jobName];
@@ -582,8 +743,10 @@
                 const points = [];
 
                 for (const run of jobData.recent) {
+                    const date = new Date(run.date);
+                    if (cutoff && date < cutoff) continue;  // Filter by time range
                     points.push({
-                        x: new Date(run.date),
+                        x: date,
                         y: run.duration,
                         meta: {
                             job: jobName,
@@ -596,6 +759,8 @@
                         }
                     });
                 }
+
+                if (points.length === 0) continue;  // Skip jobs with no data in range
 
                 // Sort by date
                 points.sort((a, b) => a.x - b.x);
@@ -771,6 +936,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         function updateToolbarButtons() {
@@ -790,6 +956,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         function deselectAllJobs() {
@@ -800,6 +967,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         // Matrix organization
@@ -859,6 +1027,7 @@
 
         function populateJobSelector() {
             buildJobMatrix();
+            buildJobIndex();
 
             // Assign colors
             const allJobs = Object.keys(data.jobs);
@@ -914,6 +1083,19 @@
             const listContainer = document.getElementById('job-list');
             listContainer.innerHTML = '';
 
+            // Apply URL params (selection and time range) or default to all
+            const hasURLSelection = applyURLParams();
+            if (!hasURLSelection) {
+                // Select all platform jobs by default, but not special groups
+                for (const platform of platformOrder) {
+                    for (const type of typeOrder) {
+                        for (const { name } of (jobMatrix[platform]?.[type] || [])) {
+                            selectedJobs.add(name);
+                        }
+                    }
+                }
+            }
+
             const allJobsSorted = Object.entries(data.jobs)
                 .map(([name, job]) => ({ name, job }))
                 .sort((a, b) => b.job.stats.median_seconds - a.job.stats.median_seconds);
@@ -921,7 +1103,7 @@
             for (const { name, job } of allJobsSorted) {
                 const color = jobColors[name];
                 const item = document.createElement('div');
-                item.className = 'job-item selected';
+                item.className = 'job-item' + (selectedJobs.has(name) ? ' selected' : '');
                 item.dataset.job = name;
                 item.onclick = () => toggleJobItem(item, name);
                 item.innerHTML = `
@@ -930,13 +1112,13 @@
                     <span class="job-median">${formatDuration(job.stats.median_seconds)}</span>
                 `;
                 listContainer.appendChild(item);
-                selectedJobs.add(name);
             }
 
             updateMatrixHighlights();
             updateJobCount();
             updateChart();
             updateStatsTable();
+            updateToolbarButtons();
         }
 
         function updateMatrixHighlights() {
@@ -992,6 +1174,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         function selectByPlatform(platform) {
@@ -1013,6 +1196,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         function selectByType(type) {
@@ -1034,6 +1218,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         function toggleSpecialGroup(group) {
@@ -1054,6 +1239,7 @@
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
+            updateURL();
         }
 
         function syncJobListUI() {
