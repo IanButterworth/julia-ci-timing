@@ -4,15 +4,17 @@ A dashboard tracking build and test times for the Julia programming language's C
 
 ## Live Dashboard
 
-Visit: **https://julialang.github.io/julia-ci-timing/** (once deployed)
+Visit: **https://IanButterworth.github.io/julia-ci-timing/**
 
 ## Features
 
-- 📊 Historical job duration charts
-- 📈 Trend analysis (faster/slower than previous run)
-- 🔍 Filter by job type (build, test, etc.)
+- 📊 Historical job duration charts with time-accurate x-axis
+- 🎯 Matrix-based job selector (platform × type)
+- 🌓 Automatic light/dark mode (follows system preference)
+- 🔗 Click data points to see commit details and links to GitHub/Buildkite
 - ⏱️ Stats: median, mean, min, max, standard deviation
 - 🔄 Updated every 2 hours via GitHub Actions
+- 📦 Preserves historical data beyond Buildkite's API window
 
 ## Local Development
 
@@ -25,11 +27,11 @@ Visit: **https://julialang.github.io/julia-ci-timing/** (once deployed)
 
 1. Create a Buildkite API token at https://buildkite.com/user/api-access-tokens
    - Enable "Read Builds" scope
-   - (Optionally enable access to the julialang org specifically)
+   - (Optionally limit access to the julialang org)
 
 2. Set the token:
    ```bash
-   export BUILDKITE_TOKEN="bkua_xxxx..."
+   export BUILDKITE_API_TOKEN="bkua_xxxx..."
    # Or create ~/.buildkite_token
    ```
 
@@ -53,7 +55,7 @@ Visit: **https://julialang.github.io/julia-ci-timing/** (once deployed)
 
 To enable automatic updates:
 
-1. Add `BUILDKITE_TOKEN` as a repository secret
+1. Add `BUILDKITE_API_TOKEN` as a repository secret
 2. Enable GitHub Pages (Settings → Pages → Source: GitHub Actions)
 
 ## Data Format
@@ -78,13 +80,17 @@ The fetcher generates `data/timing_summary.json` with:
           "commit": "abc12345",
           "build": 12345,
           "date": "2024-12-26 10:00",
-          "duration": 1234.5
+          "duration": 1234.5,
+          "message": "Commit title",
+          "author": "username"
         }
       ]
     }
   }
 }
 ```
+
+Data is merged on each fetch—new builds are added while historical builds are preserved, deduplicated by build number.
 
 ## License
 
