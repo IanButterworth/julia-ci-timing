@@ -481,21 +481,25 @@
 
             // Platform-based grouping
             if (lower.includes(':linux:') || lower.includes('linux')) {
+                if (lower.includes('coverage')) return { group: 'linux', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'linux', type: 'build' };
                 if (lower.includes('test')) return { group: 'linux', type: 'test' };
                 if (lower.includes('upload')) return { group: 'linux', type: 'upload' };
             }
             if (lower.includes(':macos:') || lower.includes('macos') || lower.includes('darwin')) {
+                if (lower.includes('coverage')) return { group: 'macos', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'macos', type: 'build' };
                 if (lower.includes('test')) return { group: 'macos', type: 'test' };
                 if (lower.includes('upload')) return { group: 'macos', type: 'upload' };
             }
             if (lower.includes(':windows:') || lower.includes('windows') || lower.includes('mingw')) {
+                if (lower.includes('coverage')) return { group: 'windows', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'windows', type: 'build' };
                 if (lower.includes('test')) return { group: 'windows', type: 'test' };
                 if (lower.includes('upload')) return { group: 'windows', type: 'upload' };
             }
             if (lower.includes(':freebsd:') || lower.includes('freebsd')) {
+                if (lower.includes('coverage')) return { group: 'freebsd', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'freebsd', type: 'build' };
                 if (lower.includes('test')) return { group: 'freebsd', type: 'test' };
                 if (lower.includes('upload')) return { group: 'freebsd', type: 'upload' };
@@ -586,8 +590,8 @@
                     maintainAspectRatio: false,
                     animation: false,
                     interaction: {
-                        mode: 'index',
-                        intersect: false
+                        mode: 'nearest',
+                        intersect: true
                     },
                     plugins: {
                         legend: {
@@ -598,12 +602,15 @@
                                 title: (items) => {
                                     if (items.length === 0) return '';
                                     const ctx = items[0];
-                                    const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
-                                    const meta = chartMetadata[key];
-                                    return [ctx.label, meta?.message || ''].filter(Boolean);
+                                    return convertEmoji(ctx.dataset.label);
                                 },
                                 label: (ctx) => {
-                                    return `${ctx.dataset.label}: ${formatDuration(ctx.parsed.y)}`;
+                                    const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
+                                    const meta = chartMetadata[key];
+                                    return [
+                                        formatDuration(ctx.parsed.y),
+                                        meta?.message || ''
+                                    ].filter(Boolean);
                                 },
                                 labelColor: (ctx) => ({
                                     borderColor: ctx.dataset.borderColor,
@@ -753,7 +760,7 @@
 
         // Matrix organization
         const platformOrder = ['linux', 'macos', 'windows', 'freebsd'];
-        const typeOrder = ['build', 'test', 'upload'];
+        const typeOrder = ['build', 'test', 'upload', 'coverage'];
         const platformLabels = {
             'linux': '🐧 Linux',
             'macos': '🍎 macOS',
@@ -763,7 +770,8 @@
         const typeLabels = {
             'build': 'Build',
             'test': 'Test',
-            'upload': 'Upload'
+            'upload': 'Upload',
+            'coverage': 'Coverage'
         };
         const specialGroups = ['juliasyntax', 'docs', 'special', 'pipeline', 'upload-results', 'other'];
         const specialLabels = {
@@ -844,8 +852,8 @@
             }
 
             // Special groups row
-            html += '<tr><th class="row-header" colspan="4" style="text-align:center; padding-top:8px;">Special</th></tr>';
-            html += '<tr><td colspan="4" style="padding:0;">';
+            html += '<tr><th class="row-header" colspan="5" style="text-align:center; padding-top:8px;">Special</th></tr>';
+            html += '<tr><td colspan="5" style="padding:0;">';
             html += '<div style="display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:center;">';
             for (const group of specialGroups) {
                 const jobs = specialJobGroups[group];

@@ -57,7 +57,7 @@ end
 
 const SCHEDULED_PIPELINE = "julia-master-scheduled"
 
-function fetch_scheduled_builds(; branch="master", state="passed", per_page=100, pages=10)
+function fetch_scheduled_builds(; branch="master", state="passed", per_page=100, pages=30)
     builds = []
     for page in 1:pages
         params = Dict(
