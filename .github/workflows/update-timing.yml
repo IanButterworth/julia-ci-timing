@@ -25,20 +25,20 @@ jobs:
       - name: Setup Julia
         uses: julia-actions/setup-julia@v2
         with:
-          version: '1.11'
+          version: '1.12'
 
       - name: Cache Julia packages
         uses: julia-actions/cache@v2
 
       - name: Install dependencies
         run: |
-          julia --color=yes -e 'using Pkg; Pkg.add(["HTTP", "JSON3"])'
+          julia --color=yes --project -e 'using Pkg; Pkg.instantiate()'
 
       - name: Fetch timing data
         env:
           BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
         run: |
-          julia --color=yes fetch_timing.jl
+          julia --color=yes --project fetch_timing.jl
 
       - name: Commit updated data
         run: |

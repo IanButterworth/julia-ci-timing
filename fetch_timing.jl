@@ -235,7 +235,6 @@ function generate_json_output(job_timings; output_dir="data")
     existing_jobs = get(existing, :jobs, Dict())
 
     summary = SortedDict{String, Any}()
-    summary["generated_at"] = Dates.format(now(UTC), dateformat"yyyy-mm-ddTHH:MM:SSZ")
     summary["jobs"] = SortedDict{String, Any}()
 
     # Collect all job names from both sources
@@ -303,8 +302,26 @@ function generate_json_output(job_timings; output_dir="data")
         )
     end
 
-    # Write summary JSON
+    # Only write if jobs data actually changed (ignore generated_at timestamp)
     summary_file = joinpath(output_dir, "timing_summary.json")
+
+    # Compare serialized jobs data (normalize by re-serializing both sides)
+    new_jobs_json = sprint(io -> JSON3.pretty(io, summary["jobs"]))
+    if isfile(summary_file)
+        existing_content = read(summary_file, String)
+        existing_parsed = JSON3.read(existing_content)
+        existing_jobs = get(existing_parsed, :jobs, nothing)
+        if existing_jobs !== nothing
+            existing_jobs_json = sprint(io -> JSON3.pretty(io, existing_jobs))
+            if existing_jobs_json == new_jobs_json
+                @info "No changes to job data, skipping write" file=summary_file
+                return summary_file
+            end
+        end
+    end
+
+    # Update timestamp and write
+    summary["generated_at"] = Dates.format(now(UTC), dateformat"yyyy-mm-ddTHH:MM:SSZ")
     open(summary_file, "w") do f
         JSON3.pretty(f, summary)
     end
