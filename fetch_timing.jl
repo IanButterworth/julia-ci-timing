@@ -37,9 +37,9 @@ function api_get(endpoint; token=get_token(), params=Dict())
     return JSON3.read(resp.body)
 end
 
-function fetch_builds(; branch="master", state="passed", per_page=100, pages=3)
+function fetch_builds(; branch="master", state="passed", per_page=100, max_pages=30, known_builds=Set{Int}())
     builds = []
-    for page in 1:pages
+    for page in 1:max_pages
         params = Dict(
             "branch" => branch,
             "state" => state,
@@ -49,17 +49,31 @@ function fetch_builds(; branch="master", state="passed", per_page=100, pages=3)
         data = api_get("organizations/$BUILDKITE_ORG/pipelines/$PIPELINE/builds"; params)
         data === nothing && break
         isempty(data) && break
-        append!(builds, data)
-        @info "Fetched page $page (julia-master)" num_builds=length(data)
+
+        # Check if we've hit builds we already have (early stop)
+        new_in_page = 0
+        for build in data
+            if build.number ∉ known_builds
+                push!(builds, build)
+                new_in_page += 1
+            end
+        end
+        @info "Fetched page $page (julia-master)" new_builds=new_in_page known=length(data)-new_in_page
+
+        # If all builds in this page were known, we can stop
+        if new_in_page == 0
+            @info "All builds on page already known, stopping early"
+            break
+        end
     end
     return builds
 end
 
 const SCHEDULED_PIPELINE = "julia-master-scheduled"
 
-function fetch_scheduled_builds(; branch="master", state="passed", per_page=100, pages=30)
+function fetch_scheduled_builds(; branch="master", state="passed", per_page=100, max_pages=10, known_builds=Set{Int}())
     builds = []
-    for page in 1:pages
+    for page in 1:max_pages
         params = Dict(
             "branch" => branch,
             "state" => state,
@@ -69,8 +83,22 @@ function fetch_scheduled_builds(; branch="master", state="passed", per_page=100,
         data = api_get("organizations/$BUILDKITE_ORG/pipelines/$SCHEDULED_PIPELINE/builds"; params)
         data === nothing && break
         isempty(data) && break
-        append!(builds, data)
-        @info "Fetched page $page (julia-master-scheduled)" num_builds=length(data)
+
+        # Check if we've hit builds we already have (early stop)
+        new_in_page = 0
+        for build in data
+            if build.number ∉ known_builds
+                push!(builds, build)
+                new_in_page += 1
+            end
+        end
+        @info "Fetched page $page (julia-master-scheduled)" new_builds=new_in_page known=length(data)-new_in_page
+
+        # If all builds in this page were known, we can stop
+        if new_in_page == 0
+            @info "All builds on page already known, stopping early"
+            break
+        end
     end
     return builds
 end
@@ -101,15 +129,10 @@ function extract_job_timings(builds)
         author::String
     }}}()
 
-    cutoff_date = DateTime(2025, 11, 1)
-
     for build in builds
         build_num = build.number
         commit = String(build.commit)[1:min(8, length(build.commit))]
         created = parse_datetime(build.created_at)
-
-        # Skip builds before cutoff date
-        created < cutoff_date && continue
 
         # Extract commit message (first line only)
         raw_message = get(build, :message, "")
@@ -183,6 +206,24 @@ function load_existing_data(output_dir)
         @warn "Failed to load existing data, starting fresh" error=e
         return Dict{String, Any}()
     end
+end
+
+function get_known_build_numbers(existing_data)
+    # Returns (master_builds, scheduled_builds) since the pipelines have independent numbering
+    master_builds = Set{Int}()
+    scheduled_builds = Set{Int}()
+    jobs = get(existing_data, :jobs, Dict())
+    for (name, job) in pairs(jobs)
+        recent = get(job, :recent, [])
+        # Coverage jobs are only in the scheduled pipeline
+        is_scheduled = occursin("coverage", lowercase(String(name)))
+        target = is_scheduled ? scheduled_builds : master_builds
+        for record in recent
+            build = get(record, :build, nothing)
+            build !== nothing && push!(target, build)
+        end
+    end
+    return (master=master_builds, scheduled=scheduled_builds)
 end
 
 function generate_json_output(job_timings; output_dir="data")
@@ -272,24 +313,30 @@ function generate_json_output(job_timings; output_dir="data")
 end
 
 function main()
-    @info "Fetching builds from Buildkite..."
-    builds = fetch_builds(; pages=30)
-    @info "Fetched julia-master builds" count=length(builds)
+    # Load existing data first to enable early stopping
+    @info "Loading existing data..."
+    existing = load_existing_data("data")
+    known = get_known_build_numbers(existing)
+    @info "Known builds from existing data" master=length(known.master) scheduled=length(known.scheduled)
 
-    scheduled_builds = fetch_scheduled_builds(; pages=10)
-    @info "Fetched julia-master-scheduled builds" count=length(scheduled_builds)
+    @info "Fetching builds from Buildkite..."
+    builds = fetch_builds(; max_pages=30, known_builds=known.master)
+    @info "Fetched new julia-master builds" count=length(builds)
+
+    scheduled_builds = fetch_scheduled_builds(; max_pages=10, known_builds=known.scheduled)
+    @info "Fetched new julia-master-scheduled builds" count=length(scheduled_builds)
 
     all_builds = vcat(builds, scheduled_builds)
-    @info "Total builds" count=length(all_builds)
+    @info "Total new builds" count=length(all_builds)
 
-    if isempty(all_builds)
-        @error "No builds fetched - check your token and permissions"
+    if isempty(all_builds) && isempty(known.master) && isempty(known.scheduled)
+        @error "No builds fetched and no existing data - check your token and permissions"
         return 1
     end
 
     @info "Extracting job timings..."
     job_timings = extract_job_timings(all_builds)
-    @info "Found jobs" count=length(job_timings)
+    @info "Found jobs in new builds" count=length(job_timings)
 
     @info "Generating JSON output..."
     generate_json_output(job_timings)
