@@ -63,6 +63,13 @@ jobs:
         with:
           ref: main  # Get latest after data update
 
+      - name: Inject build commit
+        run: |
+          COMMIT=$(git rev-parse HEAD)
+          SHORT=$(git rev-parse --short HEAD)
+          sed -i "s/__BUILD_COMMIT__/$COMMIT/g" index.html
+          sed -i "s/__BUILD_COMMIT_SHORT__/$SHORT/g" index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
