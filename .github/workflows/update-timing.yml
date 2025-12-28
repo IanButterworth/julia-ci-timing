@@ -7,9 +7,6 @@ on:
   workflow_dispatch:  # Allow manual trigger
   push:
     branches: [main]
-    paths:
-      - 'fetch_timing.jl'
-      - '.github/workflows/update-timing.yml'
 
 permissions:
   contents: write
@@ -18,6 +15,8 @@ permissions:
 
 jobs:
   fetch-and-update:
+    # Only run data fetch on schedule, manual trigger, or workflow/fetcher changes
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.modified, 'fetch_timing.jl') || contains(github.event.head_commit.modified, '.github/workflows/update-timing.yml')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -48,11 +47,13 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update timing data [skip ci]"
+            git commit -m "Update timing data"
             git push
           fi
 
   deploy-pages:
+    # Always deploy on push, but wait for fetch-and-update if it ran
+    if: always() && (needs.fetch-and-update.result == 'success' || needs.fetch-and-update.result == 'skipped')
     needs: fetch-and-update
     runs-on: ubuntu-latest
     environment:
