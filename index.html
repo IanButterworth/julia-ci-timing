@@ -1173,7 +1173,7 @@
                 // Create custom canvas for timed_out marker (⤒) at high DPI
                 const createTimedOutMarker = (fillColor) => {
                     const scale = window.devicePixelRatio || 2;
-                    const size = 16;
+                    const size = 10;
                     const canvas = document.createElement('canvas');
                     canvas.width = size * scale;
                     canvas.height = size * scale;
@@ -1183,26 +1183,26 @@
                     ctx.scale(scale, scale);
                     ctx.strokeStyle = fillColor;
                     ctx.fillStyle = fillColor;
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = 1.0;
                     ctx.lineCap = 'round';
                     ctx.lineJoin = 'round';
                     const cx = size / 2;
                     const cy = size / 2;
                     // Horizontal bar at center
                     ctx.beginPath();
-                    ctx.moveTo(cx - 3, cy);
-                    ctx.lineTo(cx + 3, cy);
+                    ctx.moveTo(cx - 1.5, cy);
+                    ctx.lineTo(cx + 1.5, cy);
                     ctx.stroke();
                     // Vertical line (stem) - from center down
                     ctx.beginPath();
                     ctx.moveTo(cx, cy);
-                    ctx.lineTo(cx, cy + 7);
+                    ctx.lineTo(cx, cy + 4);
                     ctx.stroke();
                     // Arrow head just below the bar
                     ctx.beginPath();
-                    ctx.moveTo(cx - 2.5, cy + 2.5);
+                    ctx.moveTo(cx - 1.5, cy + 2.5);
                     ctx.lineTo(cx, cy);
-                    ctx.lineTo(cx + 2.5, cy + 2.5);
+                    ctx.lineTo(cx + 1.5, cy + 2.5);
                     ctx.stroke();
                     return canvas;
                 };
