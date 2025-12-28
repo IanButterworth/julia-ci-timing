@@ -1177,15 +1177,31 @@
                     const canvas = document.createElement('canvas');
                     canvas.width = size * scale;
                     canvas.height = size * scale;
-                    canvas.style.width = size + 'px';
-                    canvas.style.height = size + 'px';
                     const ctx = canvas.getContext('2d');
                     ctx.scale(scale, scale);
-                    ctx.font = 'bold 13px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
+                    ctx.strokeStyle = fillColor;
                     ctx.fillStyle = fillColor;
-                    ctx.fillText('⤒', 8, 6);
+                    ctx.lineWidth = 1.5;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    const cx = size / 2;
+                    const cy = size / 2;
+                    // Horizontal bar at center
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 3, cy);
+                    ctx.lineTo(cx + 3, cy);
+                    ctx.stroke();
+                    // Vertical line (stem) - from center down
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx, cy + 7);
+                    ctx.stroke();
+                    // Arrow head just below the bar
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 2.5, cy + 2.5);
+                    ctx.lineTo(cx, cy);
+                    ctx.lineTo(cx + 2.5, cy + 2.5);
+                    ctx.stroke();
                     return canvas;
                 };
                 const timedOutMarker = createTimedOutMarker(color);
