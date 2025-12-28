@@ -569,11 +569,12 @@
                                 <th scope="col">Min</th>
                                 <th scope="col">Max</th>
                                 <th scope="col">σ</th>
+                                <th scope="col" title="Trend over selected time range">Trend</th>
                                 <th scope="col">n</th>
                             </tr>
                         </thead>
                         <tbody id="stats-tbody">
-                            <tr><td colspan="8" class="loading">Loading...</td></tr>
+                            <tr><td colspan="9" class="loading">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -719,6 +720,155 @@
             const hours = Math.floor(mins / 60);
             const remainMins = mins % 60;
             return `${hours}h ${remainMins}m`;
+        }
+
+        // Compute trend using linear regression with statistical significance
+        // Returns: { slope, slopePerDay, pValue, significant, direction }
+        function computeTrend(runs) {
+            if (runs.length < 3) return null;
+
+            // Convert to numeric: x = timestamp (days), y = duration (seconds)
+            const points = runs.map(r => ({
+                x: new Date(r.date).getTime() / (1000 * 60 * 60 * 24), // days since epoch
+                y: r.duration
+            }));
+
+            const n = points.length;
+            const sumX = points.reduce((s, p) => s + p.x, 0);
+            const sumY = points.reduce((s, p) => s + p.y, 0);
+            const sumXY = points.reduce((s, p) => s + p.x * p.y, 0);
+            const sumX2 = points.reduce((s, p) => s + p.x * p.x, 0);
+            const sumY2 = points.reduce((s, p) => s + p.y * p.y, 0);
+
+            const meanX = sumX / n;
+            const meanY = sumY / n;
+
+            // Slope and intercept
+            const denom = sumX2 - n * meanX * meanX;
+            if (Math.abs(denom) < 1e-10) return null;
+
+            const slope = (sumXY - n * meanX * meanY) / denom;
+
+            // Standard error of slope for t-test
+            const yPred = points.map(p => meanY + slope * (p.x - meanX));
+            const ssRes = points.reduce((s, p, i) => s + (p.y - yPred[i]) ** 2, 0);
+            const ssTot = points.reduce((s, p) => s + (p.y - meanY) ** 2, 0);
+
+            const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+
+            // Standard error of slope
+            const mse = ssRes / (n - 2);
+            const seSlope = Math.sqrt(mse / (sumX2 - n * meanX * meanX));
+
+            // t-statistic
+            const tStat = seSlope > 0 ? Math.abs(slope) / seSlope : 0;
+
+            // Approximate p-value using t-distribution (two-tailed)
+            // Using approximation for degrees of freedom = n - 2
+            const df = n - 2;
+            const pValue = tDistributionPValue(tStat, df);
+
+            // Calculate percentage change over the time range
+            const minX = Math.min(...points.map(p => p.x));
+            const maxX = Math.max(...points.map(p => p.x));
+            const intercept = meanY - slope * meanX;
+            const startValue = intercept + slope * minX;
+            const endValue = intercept + slope * maxX;
+            const percentChange = startValue > 0 ? ((endValue - startValue) / startValue) * 100 : 0;
+
+            return {
+                slope,           // seconds per day
+                slopePerDay: slope,
+                pValue,
+                rSquared,
+                significant: pValue < 0.05,
+                direction: slope > 0 ? 'up' : slope < 0 ? 'down' : 'flat',
+                percentChange,
+                n
+            };
+        }
+
+        // Approximate two-tailed p-value for t-distribution
+        function tDistributionPValue(t, df) {
+            // Using approximation from Abramowitz and Stegun
+            const x = df / (df + t * t);
+            // Regularized incomplete beta function approximation
+            const a = df / 2;
+            const b = 0.5;
+
+            // Simple approximation for p-value
+            if (df >= 30) {
+                // For large df, t approaches normal
+                const z = t;
+                return 2 * (1 - normalCDF(Math.abs(z)));
+            }
+
+            // For smaller df, use a rougher approximation
+            // This is a simplified approximation
+            const p = Math.exp(-0.5 * t * t) * Math.sqrt(df / (df + t * t));
+            return Math.min(1, Math.max(0, 2 * p * (1 + 0.5 / df)));
+        }
+
+        function normalCDF(x) {
+            const a1 =  0.254829592;
+            const a2 = -0.284496736;
+            const a3 =  1.421413741;
+            const a4 = -1.453152027;
+            const a5 =  1.061405429;
+            const p  =  0.3275911;
+
+            const sign = x < 0 ? -1 : 1;
+            x = Math.abs(x) / Math.sqrt(2);
+
+            const t = 1.0 / (1.0 + p * x);
+            const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+            return 0.5 * (1.0 + sign * y);
+        }
+
+        function formatTrend(trend) {
+            if (!trend || trend.n < 3) {
+                return '<span style="color: var(--color-fg-muted)" title="Not enough data points">—</span>';
+            }
+
+            const { slope, pValue, significant, rSquared, percentChange } = trend;
+            const absSlope = Math.abs(slope);
+            const absPct = Math.abs(percentChange);
+
+            // Convert slope to human-readable format (per day)
+            let slopeText;
+            if (absSlope < 1) {
+                slopeText = `${(absSlope * 60).toFixed(1)}s/day`;
+            } else if (absSlope < 60) {
+                slopeText = `${absSlope.toFixed(1)}s/day`;
+            } else {
+                slopeText = `${(absSlope / 60).toFixed(1)}m/day`;
+            }
+
+            // Format percentage change
+            const pctSign = percentChange > 0 ? '+' : '';
+            const pctText = `${pctSign}${percentChange.toFixed(1)}%`;
+
+            // Direction arrow and color
+            let arrow, color;
+            if (!significant) {
+                arrow = '→';
+                color = 'var(--color-fg-muted)';
+            } else if (slope > 0) {
+                arrow = '↗';
+                color = 'var(--color-danger-fg)';  // Getting slower is bad
+            } else {
+                arrow = '↘';
+                color = 'var(--color-success-fg)'; // Getting faster is good
+            }
+
+            // Confidence indicator
+            const confidence = significant ? (pValue < 0.01 ? '★★' : '★') : '';
+            const pText = pValue < 0.001 ? '<0.001' : pValue.toFixed(3);
+            const title = `${slope > 0 ? '+' : ''}${slopeText} (${pctText} over period)\np-value: ${pText}\nR²: ${(rSquared * 100).toFixed(1)}%\n${significant ? 'Statistically significant' : 'Not significant'}`;
+
+            const displayText = significant ? `${pctText}` : 'flat';
+            return `<span style="color: ${color}" title="${title}">${arrow} ${displayText} ${confidence}</span>`;
         }
 
         function filterRunsByState(runs, cutoff) {
@@ -1579,7 +1729,7 @@
             });
 
             if (selectedArray.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="loading">Select jobs to see statistics</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="loading">Select jobs to see statistics</td></tr>';
                 return;
             }
 
@@ -1603,6 +1753,9 @@
                 const max = Math.max(...durations);
                 const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
                 const std = Math.sqrt(variance);
+
+                // Compute trend using linear regression (time vs duration)
+                const trend = computeTrend(filtered);
 
                 // Get pass rate info
                 const pr = jobPassRates[jobName];
@@ -1630,6 +1783,7 @@
                     <td class="duration">${formatDuration(min)}</td>
                     <td class="duration">${formatDuration(max)}</td>
                     <td class="duration">±${formatDuration(std)}</td>
+                    <td>${formatTrend(trend)}</td>
                     <td>${filtered.length}</td>
                 `;
                 tbody.appendChild(row);
