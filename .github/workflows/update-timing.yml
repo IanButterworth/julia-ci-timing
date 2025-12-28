@@ -67,8 +67,10 @@ jobs:
         run: |
           COMMIT=$(git rev-parse HEAD)
           SHORT=$(git rev-parse --short HEAD)
-          sed -i "s/__BUILD_COMMIT__/$COMMIT/g" index.html
-          sed -i "s/__BUILD_COMMIT_SHORT__/$SHORT/g" index.html
+          echo "Injecting commit: $SHORT ($COMMIT)"
+          sed -i "s|__BUILD_COMMIT__|$COMMIT|g" index.html
+          sed -i "s|__BUILD_COMMIT_SHORT__|$SHORT|g" index.html
+          grep -o 'build-commit.*' index.html | head -1
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
