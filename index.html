@@ -2087,12 +2087,13 @@
                     populateJobSelector();
                     document.getElementById('chart-loading').style.display = 'none';
                 } else {
-                    // Update with complete data (refresh chart/stats with all data)
-                    buildJobMatrix();
-                    buildJobIndex();
-                    calculateAllPassRates();
-                    updateChart();
-                    updateStatsTable();
+                    // Update with complete data - need to rebuild everything
+                    // since we may have been missing jobs in partial parse
+                    const currentSelection = new Set(selectedJobs);
+                    populateJobSelector();
+                    // Restore selection (populateJobSelector may have changed it)
+                    selectedJobs = currentSelection;
+                    refreshAllUI();
                 }
             } catch (err) {
                 console.error('Failed to load data:', err);
