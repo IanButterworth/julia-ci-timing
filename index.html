@@ -2002,7 +2002,56 @@
             try {
                 const resp = await fetch('data/timing_summary.json');
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                data = await resp.json();
+
+                // Render empty matrix skeleton immediately
+                renderMatrixSkeleton();
+
+                // Stream JSON parsing for progressive UI updates
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let jsonText = '';
+                let jobCount = 0;
+                let lastRenderTime = 0;
+                const RENDER_INTERVAL = 50; // ms between UI updates
+
+                // Initialize data structure
+                data = { jobs: {} };
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    jsonText += decoder.decode(value, { stream: true });
+
+                    // Try to parse incrementally - extract jobs as they arrive
+                    const now = performance.now();
+                    if (now - lastRenderTime > RENDER_INTERVAL) {
+                        // Extract generated_at if we haven't yet
+                        if (!data.generated_at) {
+                            const match = jsonText.match(/"generated_at":\s*"([^"]+)"/);
+                            if (match) {
+                                data.generated_at = match[1];
+                                const updatedEl = document.getElementById('last-updated');
+                                updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
+                                updatedEl.title = data.generated_at;
+                            }
+                        }
+
+                        // Count jobs to show progress
+                        const jobMatches = jsonText.match(/":\s*\{\s*"recent"/g);
+                        const newCount = jobMatches ? jobMatches.length : 0;
+                        if (newCount > jobCount) {
+                            jobCount = newCount;
+                            document.getElementById('chart-loading').innerHTML =
+                                `<span class="loading">Loading... ${jobCount} jobs</span>`;
+                        }
+                        lastRenderTime = now;
+                    }
+                }
+
+                // Final parse
+                jsonText += decoder.decode();
+                data = JSON.parse(jsonText);
 
                 const updatedEl = document.getElementById('last-updated');
                 updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
@@ -2023,6 +2072,35 @@
                     </td></tr>
                 `;
             }
+        }
+
+        // Render empty matrix immediately so users see structure
+        function renderMatrixSkeleton() {
+            const matrixContainer = document.getElementById('job-matrix');
+            let html = '<table class="matrix-table">';
+
+            // Header row
+            html += '<tr><th class="matrix-corner" title="Loading...">⋯</th>';
+            for (const type of typeOrder) {
+                html += `<th>${typeLabels[type]}</th>`;
+            }
+            html += '</tr>';
+
+            // Platform rows with loading placeholders
+            for (const platform of platformOrder) {
+                html += `<tr><th class="row-header">${platformLabels[platform]}</th>`;
+                for (const type of typeOrder) {
+                    html += `<td class="matrix-cell" data-platform="${platform}" data-type="${type}">⋯</td>`;
+                }
+                html += '</tr>';
+            }
+
+            // Special groups placeholder
+            html += '<tr><th class="row-header" colspan="5" style="text-align:center; padding-top:8px;">Special</th></tr>';
+            html += '<tr><td colspan="5" class="loading" style="font-size:11px;">Loading special jobs...</td></tr>';
+
+            html += '</table>';
+            matrixContainer.innerHTML = html;
         }
 
         async function refreshData() {
