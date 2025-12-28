@@ -335,6 +335,15 @@
         .stats-bar tr:hover { background: var(--color-neutral-muted); }
 
         .loading { padding: 20px; text-align: center; color: var(--color-fg-muted); }
+        .loading-overlay { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: var(--color-canvas-default); 
+            z-index: 10; 
+        }
         .error { color: var(--color-danger-fg); }
 
         /* Popup */
@@ -532,15 +541,16 @@
 
     <main class="main">
         <aside class="sidebar" aria-label="Job selection">
-            <div class="job-matrix" id="job-matrix" role="grid" aria-label="Platform and test type matrix"></div>
+            <div class="job-matrix" id="job-matrix" role="grid" aria-label="Platform and test type matrix"><div class="loading">Loading...</div></div>
             <div class="job-list-section">
                 <div class="job-list-header">Jobs (<span id="job-count">0/0</span>)</div>
-                <div class="job-list" id="job-list" role="listbox" aria-label="Available jobs"></div>
+                <div class="job-list" id="job-list" role="listbox" aria-label="Available jobs"><div class="loading">Loading jobs...</div></div>
             </div>
         </aside>
         <div class="content">
             <div class="chart-container">
                 <div class="chart-wrapper">
+                    <div class="loading-overlay" id="chart-loading"><span class="loading">Loading chart data...</span></div>
                     <canvas id="timing-chart" role="img" aria-label="CI timing chart"></canvas>
                 </div>
             </div>
@@ -1999,8 +2009,14 @@
                 updatedEl.title = data.generated_at;
 
                 populateJobSelector();
+
+                // Hide loading overlay
+                document.getElementById('chart-loading').style.display = 'none';
             } catch (err) {
                 console.error('Failed to load data:', err);
+                document.getElementById('chart-loading').innerHTML = '<span class="error">Failed to load data</span>';
+                document.getElementById('job-matrix').innerHTML = '<div class="error">Failed to load</div>';
+                document.getElementById('job-list').innerHTML = '<div class="error">Failed to load jobs</div>';
                 document.getElementById('stats-tbody').innerHTML = `
                     <tr><td colspan="7" class="error">
                         Failed to load data. Run <code>julia fetch_timing.jl</code> to generate data.
