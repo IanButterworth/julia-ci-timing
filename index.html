@@ -329,6 +329,24 @@
             position: sticky;
             top: 0;
         }
+        .stats-bar th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .stats-bar th.sortable:hover {
+            background: var(--color-neutral-muted);
+            color: var(--color-fg-default);
+        }
+        .stats-bar th .sort-indicator {
+            margin-left: 4px;
+            opacity: 0.3;
+        }
+        .stats-bar th.sorted .sort-indicator {
+            opacity: 1;
+        }
+        .stats-bar th.sorted {
+            color: var(--color-fg-default);
+        }
         .stats-bar td {
             font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
             font-size: 11px;
@@ -562,15 +580,15 @@
                     <table role="table" aria-label="Job statistics">
                         <thead>
                             <tr>
-                                <th scope="col">Job</th>
-                                <th scope="col" title="Pass rate in last 14 days">Pass Rate</th>
-                                <th scope="col">Median</th>
-                                <th scope="col">Mean</th>
-                                <th scope="col">Min</th>
-                                <th scope="col">Max</th>
-                                <th scope="col">σ</th>
-                                <th scope="col" title="Trend over selected time range">Trend</th>
-                                <th scope="col">n</th>
+                                <th scope="col" class="sortable" data-sort="job" onclick="handleStatsTableSort('job')">Job <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="passRate" title="Pass rate in last 14 days" onclick="handleStatsTableSort('passRate')">Pass Rate <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="median" onclick="handleStatsTableSort('median')">Median <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="mean" onclick="handleStatsTableSort('mean')">Mean <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="min" onclick="handleStatsTableSort('min')">Min <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="max" onclick="handleStatsTableSort('max')">Max <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="std" onclick="handleStatsTableSort('std')">σ <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="trend" title="Trend over selected time range" onclick="handleStatsTableSort('trend')">Trend <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="n" onclick="handleStatsTableSort('n')">n <span class="sort-indicator">▲</span></th>
                             </tr>
                         </thead>
                         <tbody id="stats-tbody">
@@ -588,6 +606,10 @@
         // === Constants ===
         const FAILED_STATES = ['failed', 'timed_out', 'canceled'];
         const VALID_TIME_RANGES = [0, 7, 14, 30, 60, 90];
+
+        // Stats table sorting state
+        let statsTableSortColumn = 'median';
+        let statsTableSortAsc = false;  // false = descending (largest first)
         const VALID_LINE_TYPES = ['raw', '7', '30', '90'];
         const VALID_STATE_FILTERS = ['all', 'passed', 'failed'];
         const DEFAULT_TIME_RANGE = 30;
@@ -1722,29 +1744,23 @@
             const tbody = document.getElementById('stats-tbody');
             tbody.innerHTML = '';
 
-            const selectedArray = Array.from(selectedJobs).sort((a, b) => {
-                const ma = data.jobs[a]?.stats?.median_seconds ?? 0;
-                const mb = data.jobs[b]?.stats?.median_seconds ?? 0;
-                return mb - ma;
-            });
-
-            if (selectedArray.length === 0) {
+            if (selectedJobs.size === 0) {
                 tbody.innerHTML = '<tr><td colspan="9" class="loading">Select jobs to see statistics</td></tr>';
+                updateSortIndicators();
                 return;
             }
 
             const cutoff = getTimeRangeCutoff();
 
-            for (const jobName of selectedArray) {
+            // First, compute all stats for each job
+            const jobStats = [];
+            for (const jobName of selectedJobs) {
                 const job = data.jobs[jobName];
                 if (!job) continue;
-                const color = jobColors[jobName];
 
                 const filtered = filterRunsByState(job.recent, cutoff);
-
                 if (filtered.length === 0) continue;
 
-                // Compute stats from filtered data
                 const durations = filtered.map(r => r.duration);
                 const sorted = [...durations].sort((a, b) => a - b);
                 const median = sorted[Math.floor(sorted.length / 2)];
@@ -1753,25 +1769,91 @@
                 const max = Math.max(...durations);
                 const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
                 const std = Math.sqrt(variance);
-
-                // Compute trend using linear regression (time vs duration)
                 const trend = computeTrend(filtered);
-
-                // Get pass rate info
                 const pr = jobPassRates[jobName];
+
+                jobStats.push({
+                    jobName,
+                    color: jobColors[jobName],
+                    median,
+                    mean,
+                    min,
+                    max,
+                    std,
+                    trend,
+                    pr,
+                    n: filtered.length
+                });
+            }
+
+            // Sort based on current sort column
+            jobStats.sort((a, b) => {
+                let cmp = 0;
+                switch (statsTableSortColumn) {
+                    case 'job':
+                        cmp = a.jobName.localeCompare(b.jobName);
+                        break;
+                    case 'passRate':
+                        const prA = a.pr?.rate ?? 1;
+                        const prB = b.pr?.rate ?? 1;
+                        cmp = prA - prB;
+                        break;
+                    case 'median':
+                        cmp = a.median - b.median;
+                        break;
+                    case 'mean':
+                        cmp = a.mean - b.mean;
+                        break;
+                    case 'min':
+                        cmp = a.min - b.min;
+                        break;
+                    case 'max':
+                        cmp = a.max - b.max;
+                        break;
+                    case 'std':
+                        cmp = a.std - b.std;
+                        break;
+                    case 'trend':
+                        // Sort by: significant positive (worst) → flat → significant negative (best)
+                        // Tier: 1 = significant positive, 0 = flat/not significant, -1 = significant negative
+                        const getTrendTier = (t) => {
+                            if (!t || !t.significant) return 0;  // flat
+                            return t.percentChange > 0 ? 1 : -1;
+                        };
+                        const tierA = getTrendTier(a.trend);
+                        const tierB = getTrendTier(b.trend);
+                        if (tierA !== tierB) {
+                            cmp = tierA - tierB;
+                        } else {
+                            // Within same tier, sort by magnitude
+                            const pctA = a.trend?.percentChange ?? 0;
+                            const pctB = b.trend?.percentChange ?? 0;
+                            cmp = pctA - pctB;
+                        }
+                        break;
+                    case 'n':
+                        cmp = a.n - b.n;
+                        break;
+                }
+                return statsTableSortAsc ? cmp : -cmp;
+            });
+
+            // Render rows
+            for (const stat of jobStats) {
+                const { jobName, color, median, mean, min, max, std, trend, pr, n } = stat;
+
                 let passRateHtml = '<span style="color: var(--color-fg-muted)">—</span>';
                 if (pr && pr.total > 0) {
                     const pct = Math.round(pr.rate * 100);
                     const isLow = pr.total >= PASS_RATE_MIN_RUNS && pr.rate < PASS_RATE_THRESHOLD;
-                    const color = isLow ? 'var(--color-danger-fg)' : (pr.rate < 1 ? 'var(--color-attention-fg)' : 'var(--color-success-fg)');
+                    const prColor = isLow ? 'var(--color-danger-fg)' : (pr.rate < 1 ? 'var(--color-attention-fg)' : 'var(--color-success-fg)');
                     const icon = isLow ? '⚠️ ' : '';
-                    // Build detailed breakdown
                     const parts = [];
                     if (pr.failed > 0) parts.push(`${pr.failed} failed`);
                     if (pr.timedOut > 0) parts.push(`${pr.timedOut} timed out`);
                     if (pr.canceled > 0) parts.push(`${pr.canceled} canceled`);
                     const breakdown = parts.length > 0 ? parts.join(', ') : 'all passed';
-                    passRateHtml = `<span style="color: ${color}" title="${breakdown} out of ${pr.total} in last ${PASS_RATE_DAYS} days">${icon}${pct}%</span>`;
+                    passRateHtml = `<span style="color: ${prColor}" title="${breakdown} out of ${pr.total} in last ${PASS_RATE_DAYS} days">${icon}${pct}%</span>`;
                 }
 
                 const row = document.createElement('tr');
@@ -1784,10 +1866,37 @@
                     <td class="duration">${formatDuration(max)}</td>
                     <td class="duration">±${formatDuration(std)}</td>
                     <td>${formatTrend(trend)}</td>
-                    <td>${filtered.length}</td>
+                    <td>${n}</td>
                 `;
                 tbody.appendChild(row);
             }
+
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            const headers = document.querySelectorAll('.stats-bar th.sortable');
+            headers.forEach(th => {
+                const col = th.dataset.sort;
+                const indicator = th.querySelector('.sort-indicator');
+                if (col === statsTableSortColumn) {
+                    th.classList.add('sorted');
+                    indicator.textContent = statsTableSortAsc ? '▲' : '▼';
+                } else {
+                    th.classList.remove('sorted');
+                    indicator.textContent = '▲';
+                }
+            });
+        }
+
+        function handleStatsTableSort(column) {
+            if (statsTableSortColumn === column) {
+                statsTableSortAsc = !statsTableSortAsc;
+            } else {
+                statsTableSortColumn = column;
+                statsTableSortAsc = column === 'job';  // Job defaults to ascending, others to descending
+            }
+            updateStatsTable();
         }
 
         function toggleJobItem(item, jobName) {
