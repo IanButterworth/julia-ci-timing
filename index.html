@@ -2000,22 +2000,28 @@
 
         async function loadData() {
             try {
-                const resp = await fetch('data/timing_summary.json');
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
                 // Render empty matrix skeleton immediately
                 renderMatrixSkeleton();
 
-                // Stream JSON parsing for progressive UI updates
+                const resp = await fetch('data/timing_summary.json');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                // Stream and parse JSON progressively
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
                 let jsonText = '';
                 let jobCount = 0;
-                let lastRenderTime = 0;
-                const RENDER_INTERVAL = 50; // ms between UI updates
+                let uiRendered = false;
+                let lastProgressTime = 0;
+                const PROGRESS_INTERVAL = 100; // ms between progress updates
 
                 // Initialize data structure
                 data = { jobs: {} };
+
+                // Calculate cutoff date for early UI render based on default time range
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - DEFAULT_TIME_RANGE);
+                const cutoffStr = cutoffDate.toISOString().slice(0, 10); // "yyyy-mm-dd"
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -2023,9 +2029,8 @@
 
                     jsonText += decoder.decode(value, { stream: true });
 
-                    // Try to parse incrementally - extract jobs as they arrive
                     const now = performance.now();
-                    if (now - lastRenderTime > RENDER_INTERVAL) {
+                    if (now - lastProgressTime > PROGRESS_INTERVAL) {
                         // Extract generated_at if we haven't yet
                         if (!data.generated_at) {
                             const match = jsonText.match(/"generated_at":\s*"([^"]+)"/);
@@ -2045,7 +2050,27 @@
                             document.getElementById('chart-loading').innerHTML =
                                 `<span class="loading">Loading... ${jobCount} jobs</span>`;
                         }
-                        lastRenderTime = now;
+
+                        // Try to render UI early once we have enough data for the default time range
+                        if (!uiRendered && jobCount >= 5) {
+                            // Check if we have data beyond the cutoff date (older data)
+                            // The JSON has jobs sorted newest first, so look for dates older than cutoff
+                            const hasOldEnoughData = jsonText.includes(`"date": "${cutoffStr}`) ||
+                                                     jsonText.includes(`"date": "20`) && jsonText.lastIndexOf('"date":') > jsonText.length - 5000;
+
+                            // Try a partial parse to see if we can render
+                            if (hasOldEnoughData || jsonText.length > 500000) {
+                                const partialData = tryParsePartialJSON(jsonText);
+                                if (partialData && Object.keys(partialData.jobs).length >= 5) {
+                                    data = partialData;
+                                    populateJobSelector();
+                                    document.getElementById('chart-loading').style.display = 'none';
+                                    uiRendered = true;
+                                }
+                            }
+                        }
+
+                        lastProgressTime = now;
                     }
                 }
 
@@ -2057,10 +2082,17 @@
                 updatedEl.textContent = `Updated ${timeAgo(data.generated_at)}`;
                 updatedEl.title = data.generated_at;
 
-                populateJobSelector();
-
-                // Hide loading overlay
-                document.getElementById('chart-loading').style.display = 'none';
+                if (!uiRendered) {
+                    populateJobSelector();
+                    document.getElementById('chart-loading').style.display = 'none';
+                } else {
+                    // Update with complete data (refresh chart/stats with all data)
+                    buildJobMatrix();
+                    buildJobIndex();
+                    calculateAllPassRates();
+                    updateChart();
+                    updateStatsTable();
+                }
             } catch (err) {
                 console.error('Failed to load data:', err);
                 document.getElementById('chart-loading').innerHTML = '<span class="error">Failed to load data</span>';
@@ -2071,6 +2103,36 @@
                         Failed to load data. Run <code>julia fetch_timing.jl</code> to generate data.
                     </td></tr>
                 `;
+            }
+        }
+
+        // Try to parse partial JSON by closing open structures
+        function tryParsePartialJSON(jsonText) {
+            try {
+                // Find the last complete job entry
+                // Jobs look like: "jobname": { "recent": [...], "stats": {...} }
+                // Find a point where we can safely truncate
+
+                // Look for the pattern where a job's stats section ends
+                const statsEndPattern = /"std_seconds":\s*[\d.]+\s*\}\s*\}/g;
+                let lastMatch = null;
+                let match;
+                while ((match = statsEndPattern.exec(jsonText)) !== null) {
+                    lastMatch = match;
+                }
+
+                if (!lastMatch) return null;
+
+                // Truncate at the end of the last complete job and close the JSON
+                const truncateAt = lastMatch.index + lastMatch[0].length;
+                let partial = jsonText.slice(0, truncateAt);
+
+                // Close any remaining open braces
+                partial += '}}';  // Close jobs object and root object
+
+                return JSON.parse(partial);
+            } catch (e) {
+                return null;
             }
         }
 
