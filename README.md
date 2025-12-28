@@ -4,7 +4,7 @@ A dashboard tracking build and test times for the Julia programming language's C
 
 ## Live Dashboard
 
-Visit: **https://IanButterworth.github.io/julia-ci-timing/**
+Visit: **https://JuliaCI.github.io/julia-ci-timing/**
 
 ## Data Sources
 
