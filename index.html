@@ -1177,6 +1177,8 @@
                     const canvas = document.createElement('canvas');
                     canvas.width = size * scale;
                     canvas.height = size * scale;
+                    canvas.style.width = size + 'px';
+                    canvas.style.height = size + 'px';
                     const ctx = canvas.getContext('2d');
                     ctx.scale(scale, scale);
                     ctx.strokeStyle = fillColor;
