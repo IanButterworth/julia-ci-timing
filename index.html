@@ -1851,9 +1851,11 @@
                 }
             }
 
+            const getLatestDuration = (job) => job.recent?.[0]?.duration ?? 0;
+
             const allJobsSorted = Object.entries(data.jobs)
                 .map(([name, job]) => ({ name, job }))
-                .sort((a, b) => b.job.stats.median_seconds - a.job.stats.median_seconds);
+                .sort((a, b) => getLatestDuration(b.job) - getLatestDuration(a.job));
 
             for (const { name, job } of allJobsSorted) {
                 const color = jobColors[name];
@@ -1871,11 +1873,12 @@
                     if (pr.timedOut > 0) parts.push(`${pr.timedOut} timed out`);
                     passRateHtml = `<span class="failure-rate" title="${parts.join(', ')} in last ${PASS_RATE_DAYS} days">⚠️ ${pct}%</span>`;
                 }
+                const latestDuration = getLatestDuration(job);
                 item.innerHTML = `
                     <span class="color-dot" style="background: ${color}"></span>
                     <span class="job-name">${convertEmoji(name)}</span>
                     ${passRateHtml}
-                    <span class="job-median">${formatDuration(job.stats.median_seconds)}</span>
+                    <span class="job-median" title="Latest run">${formatDuration(latestDuration)}</span>
                 `;
                 listContainer.appendChild(item);
             }
