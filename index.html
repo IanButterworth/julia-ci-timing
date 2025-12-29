@@ -1984,6 +1984,244 @@
             }
         }
 
+        // Helper to convert HSL to RGB
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+        }
+
+        // Helper to convert any color to rgba with specified alpha
+        function colorToRgba(color, alpha) {
+            if (!color || typeof color !== 'string') return color;
+            
+            // Handle hex colors
+            const hexResult = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(color);
+            if (hexResult) {
+                return `rgba(${parseInt(hexResult[1], 16)}, ${parseInt(hexResult[2], 16)}, ${parseInt(hexResult[3], 16)}, ${alpha})`;
+            }
+            
+            // Handle hsl colors - convert to rgba
+            const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            if (hslMatch) {
+                const [r, g, b] = hslToRgb(parseInt(hslMatch[1]), parseInt(hslMatch[2]), parseInt(hslMatch[3]));
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            
+            // Handle rgb colors
+            const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (rgbMatch) {
+                return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`;
+            }
+            
+            // Handle rgba - replace the alpha
+            const rgbaMatch = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
+            if (rgbaMatch) {
+                return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${alpha})`;
+            }
+            
+            // Handle hsla - convert to rgba
+            const hslaMatch = color.match(/hsla\((\d+),\s*(\d+)%,\s*(\d+)%,\s*[\d.]+\)/);
+            if (hslaMatch) {
+                const [r, g, b] = hslToRgb(parseInt(hslaMatch[1]), parseInt(hslaMatch[2]), parseInt(hslaMatch[3]));
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            
+            return color;
+        }
+
+        // Create smaller timeout marker for de-emphasized state
+        function createSmallTimedOutMarker(fillColor) {
+            const scale = window.devicePixelRatio || 2;
+            const size = 5;  // Half the normal size
+            const canvas = document.createElement('canvas');
+            canvas.width = size * scale;
+            canvas.height = size * scale;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+            ctx.strokeStyle = fillColor;
+            ctx.fillStyle = fillColor;
+            ctx.lineWidth = 0.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            const cx = size / 2;
+            const cy = size / 2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 0.75, cy);
+            ctx.lineTo(cx + 0.75, cy);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx, cy + 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - 0.75, cy + 1.25);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx + 0.75, cy + 1.25);
+            ctx.stroke();
+            return canvas;
+        }
+
+        // Cache for small timeout markers
+        const smallTimedOutMarkerCache = {};
+        function getSmallTimedOutMarker(color) {
+            if (!smallTimedOutMarkerCache[color]) {
+                smallTimedOutMarkerCache[color] = createSmallTimedOutMarker(color);
+            }
+            return smallTimedOutMarkerCache[color];
+        }
+
+        // Highlight a specific job/agent in the chart, de-emphasizing others
+        let highlightActive = false;
+        function highlightChartDataset(jobColor, agent = null) {
+            if (!chart) return;
+            
+            // Store original values on first highlight
+            if (!highlightActive) {
+                chart.data.datasets.forEach(ds => {
+                    ds._originalBorderColor = ds.borderColor;
+                    ds._originalBackgroundColor = ds.backgroundColor;
+                    ds._originalBorderWidth = ds.borderWidth;
+                    ds._originalPointRadius = ds.pointRadius;
+                    ds._originalPointBackgroundColor = ds.pointBackgroundColor;
+                    ds._originalPointBorderColor = ds.pointBorderColor;
+                    ds._originalPointStyle = ds.pointStyle;
+                });
+                highlightActive = true;
+            }
+            
+            chart.data.datasets.forEach((ds, dsIdx) => {
+                // Match by the original border color (unique per job)
+                const isJobMatch = ds._originalBorderColor === jobColor;
+                const hasPointsArray = Array.isArray(ds._originalPointRadius) && ds._originalPointRadius.some(r => r > 0);
+                const hasPointsSingle = !Array.isArray(ds._originalPointRadius) && ds._originalPointRadius > 0;
+                const hasPoints = hasPointsArray || hasPointsSingle;
+                
+                // Helper to mute a color
+                const muteColor = (c) => {
+                    if (typeof c === 'string') return colorToRgba(c, 0.25);
+                    return c;
+                };
+                
+                // Helper to mute point colors array or single value
+                const mutePointColors = (colors) => {
+                    if (Array.isArray(colors)) {
+                        return colors.map(muteColor);
+                    } else if (typeof colors === 'string') {
+                        return muteColor(colors);
+                    }
+                    return colors;
+                };
+                
+                // Helper to mute point styles (for timeout markers)
+                const mutePointStyles = (styles, origColors) => {
+                    if (!Array.isArray(styles)) return styles;
+                    return styles.map((style, ptIdx) => {
+                        if (style instanceof HTMLCanvasElement) {
+                            const origColor = Array.isArray(origColors) ? origColors[ptIdx] : origColors;
+                            return getMutedTimedOutMarker(origColor);
+                        }
+                        return style;
+                    });
+                };
+                
+                if (isJobMatch && !agent) {
+                    // Highlight entire job: keep original formatting
+                    ds.borderColor = ds._originalBorderColor;
+                    ds.backgroundColor = ds._originalBackgroundColor;
+                    ds.borderWidth = ds._originalBorderWidth;
+                    ds.pointRadius = ds._originalPointRadius;
+                    ds.pointBackgroundColor = ds._originalPointBackgroundColor;
+                    ds.pointBorderColor = ds._originalPointBorderColor;
+                    ds.pointStyle = ds._originalPointStyle;
+                } else if (isJobMatch && agent) {
+                    // Highlight specific agent within this job
+                    // Mute the line
+                    ds.borderColor = muteColor(ds._originalBorderColor);
+                    ds.backgroundColor = muteColor(ds._originalBackgroundColor);
+                    ds.borderWidth = ds._originalBorderWidth;
+                    
+                    if (hasPoints) {
+                        // Reduce non-matching agent points to half size (Chart.js caches point colors)
+                        if (Array.isArray(ds._originalPointRadius)) {
+                            ds.pointRadius = ds._originalPointRadius.map((r, ptIdx) => {
+                                const meta = chartMetadata[`${dsIdx}-${ptIdx}`];
+                                if (meta && meta.agent === agent) return r;
+                                return r / 2;
+                            });
+                        } else {
+                            ds.pointRadius = ds._originalPointRadius;
+                        }
+                        // Use smaller timeout markers for non-matching agents
+                        if (Array.isArray(ds._originalPointStyle)) {
+                            ds.pointStyle = ds._originalPointStyle.map((style, ptIdx) => {
+                                const meta = chartMetadata[`${dsIdx}-${ptIdx}`];
+                                if (meta && meta.agent === agent) return style;
+                                if (style instanceof HTMLCanvasElement) {
+                                    const origColor = Array.isArray(ds._originalPointBackgroundColor) 
+                                        ? ds._originalPointBackgroundColor[ptIdx] 
+                                        : ds._originalPointBackgroundColor;
+                                    return getSmallTimedOutMarker(origColor);
+                                }
+                                return style;
+                            });
+                        }
+                        ds.pointBackgroundColor = ds._originalPointBackgroundColor;
+                        ds.pointBorderColor = ds._originalPointBorderColor;
+                    }
+                } else {
+                    // De-emphasize non-matching jobs: mute line and reduce points
+                    ds.borderColor = muteColor(ds._originalBorderColor);
+                    ds.backgroundColor = muteColor(ds._originalBackgroundColor);
+                    ds.borderWidth = 1;
+                    // Reduce points to half size (Chart.js caches point colors)
+                    if (ds._originalPointRadius) {
+                        if (Array.isArray(ds._originalPointRadius)) {
+                            ds.pointRadius = ds._originalPointRadius.map(r => r / 2);
+                        } else if (typeof ds._originalPointRadius === 'number') {
+                            ds.pointRadius = ds._originalPointRadius / 2;
+                        }
+                    }
+                    // Use smaller timeout markers for non-matching jobs
+                    if (Array.isArray(ds._originalPointStyle)) {
+                        ds.pointStyle = ds._originalPointStyle.map((style, ptIdx) => {
+                            if (style instanceof HTMLCanvasElement) {
+                                const origColor = Array.isArray(ds._originalPointBackgroundColor) 
+                                    ? ds._originalPointBackgroundColor[ptIdx] 
+                                    : ds._originalPointBackgroundColor;
+                                return getSmallTimedOutMarker(origColor);
+                            }
+                            return style;
+                        });
+                    }
+                }
+            });
+            chart.update();
+        }
+
+        function clearChartHighlight() {
+            if (!chart || !highlightActive) return;
+            
+            chart.data.datasets.forEach(ds => {
+                ds.borderColor = ds._originalBorderColor;
+                ds.backgroundColor = ds._originalBackgroundColor;
+                ds.borderWidth = ds._originalBorderWidth;
+                ds.pointRadius = ds._originalPointRadius;
+                ds.pointBackgroundColor = ds._originalPointBackgroundColor;
+                ds.pointBorderColor = ds._originalPointBorderColor;
+                ds.pointStyle = ds._originalPointStyle;
+            });
+            highlightActive = false;
+            chart.update('none');
+        }
+
         // Resizable stats panel
         (function() {
             const handle = document.getElementById('resize-handle');
@@ -2221,6 +2459,8 @@
                     row.className = `expandable${isExpanded ? ' expanded' : ''}`;
                     row.onclick = () => toggleJobExpand(jobName);
                 }
+                row.onmouseenter = () => highlightChartDataset(color);
+                row.onmouseleave = () => clearChartHighlight();
                 row.innerHTML = `
                     <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
                     <td>${hostsHtml}</td>
@@ -2292,6 +2532,8 @@
 
                         const hostRow = document.createElement('tr');
                         hostRow.className = 'host-row';
+                        hostRow.onmouseenter = () => highlightChartDataset(color, agent);
+                        hostRow.onmouseleave = () => clearChartHighlight();
                         hostRow.innerHTML = `
                             <td><span class="color-dot" style="background: ${hostColor}"></span> ${agent}</td>
                             <td></td>
