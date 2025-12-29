@@ -411,6 +411,32 @@
             font-size: 11px;
         }
         .stats-bar tr:hover { background: var(--color-neutral-muted); }
+        .stats-bar tr.expandable { cursor: pointer; }
+        .stats-bar tr.expandable td:first-child::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 6px;
+            font-size: 8px;
+            transition: transform 0.15s;
+            color: var(--color-fg-muted);
+        }
+        .stats-bar tr.expandable.expanded td:first-child::before {
+            transform: rotate(90deg);
+        }
+        .stats-bar tr.host-row {
+            background: var(--color-canvas-inset);
+        }
+        .stats-bar tr.host-row td {
+            font-size: 10px;
+            padding: 4px 12px;
+            color: var(--color-fg-muted);
+        }
+        .stats-bar tr.host-row td:first-child {
+            padding-left: 28px;
+        }
+        .stats-bar tr.host-row:hover {
+            background: var(--color-neutral-muted);
+        }
 
         .loading { padding: 20px; text-align: center; color: var(--color-fg-muted); }
         .loading-overlay {
@@ -700,6 +726,7 @@
         let lineType = DEFAULT_LINE_TYPE;
         let excludedStates = new Set();  // States to exclude from display
         let excludedHosts = new Set();  // Hosts to exclude from display
+        let expandedJobs = new Set();  // Jobs expanded in stats table
         let jobColors = {};
         let chartMetadata = {};
         // Custom zoom state (null = use timeRangeDays preset)
@@ -2156,7 +2183,14 @@
                     passRateHtml = `<span style="color: ${prColor}" title="${breakdown} out of ${pr.total} in last ${PASS_RATE_DAYS} days">${icon}${pct}%</span>`;
                 }
 
+                const isExpanded = expandedJobs.has(jobName);
+                const hasMultipleHosts = agents.length > 1;
+
                 const row = document.createElement('tr');
+                if (hasMultipleHosts) {
+                    row.className = `expandable${isExpanded ? ' expanded' : ''}`;
+                    row.onclick = () => toggleJobExpand(jobName);
+                }
                 row.innerHTML = `
                     <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
                     <td>${hostsHtml}</td>
@@ -2170,9 +2204,61 @@
                     <td>${n}</td>
                 `;
                 tbody.appendChild(row);
+
+                // Add host detail rows if expanded
+                if (isExpanded && hasMultipleHosts) {
+                    const job = data.jobs[jobName];
+                    const filtered = filterRunsByState(job.recent, rangeMin, rangeMax);
+                    const maxShift = 20;
+
+                    for (let i = 0; i < agents.length; i++) {
+                        const [agent, count] = agents[i];
+                        const hueShift = agents.length > 1
+                            ? -maxShift + (2 * maxShift * i / (agents.length - 1))
+                            : 0;
+                        const hostColor = shiftHue(color, hueShift);
+
+                        // Calculate stats for this host only
+                        const hostRuns = filtered.filter(r => r.agent === agent);
+                        const hostDurations = hostRuns.map(r => r.duration);
+                        const hostSorted = [...hostDurations].sort((a, b) => a - b);
+                        const hostMedian = hostSorted[Math.floor(hostSorted.length / 2)];
+                        const hostMean = hostDurations.reduce((a, b) => a + b, 0) / hostDurations.length;
+                        const hostMin = Math.min(...hostDurations);
+                        const hostMax = Math.max(...hostDurations);
+                        const hostVariance = hostDurations.reduce((sum, d) => sum + (d - hostMean) ** 2, 0) / hostDurations.length;
+                        const hostStd = Math.sqrt(hostVariance);
+                        const hostTrend = computeTrend(hostRuns);
+
+                        const hostRow = document.createElement('tr');
+                        hostRow.className = 'host-row';
+                        hostRow.innerHTML = `
+                            <td><span class="color-dot" style="background: ${hostColor}"></span> ${agent}</td>
+                            <td></td>
+                            <td></td>
+                            <td class="duration">${formatDuration(hostMedian)}</td>
+                            <td class="duration">${formatDuration(hostMean)}</td>
+                            <td class="duration">${formatDuration(hostMin)}</td>
+                            <td class="duration">${formatDuration(hostMax)}</td>
+                            <td class="duration">±${formatDuration(hostStd)}</td>
+                            <td>${formatTrend(hostTrend)}</td>
+                            <td>${count}</td>
+                        `;
+                        tbody.appendChild(hostRow);
+                    }
+                }
             }
 
             updateSortIndicators();
+        }
+
+        function toggleJobExpand(jobName) {
+            if (expandedJobs.has(jobName)) {
+                expandedJobs.delete(jobName);
+            } else {
+                expandedJobs.add(jobName);
+            }
+            updateStatsTable();
         }
 
         function updateSortIndicators() {
