@@ -893,10 +893,11 @@
             return `<span style="color: ${color}" title="${title}">${arrow} ${displayText} ${confidence}</span>`;
         }
 
-        function filterRunsByState(runs, cutoff) {
+        function filterRunsByState(runs, cutoff, maxCutoff = null) {
             return runs.filter(r => {
                 const date = new Date(r.date);
                 if (cutoff && date < cutoff) return false;
+                if (maxCutoff && date > maxCutoff) return false;
                 const runState = getRunState(r);
                 if (stateFilter === 'passed' && runState !== 'passed') return false;
                 if (stateFilter === 'failed' && !isFailedState(runState)) return false;
@@ -1214,10 +1215,27 @@
         }
 
         function getTimeRangeCutoff() {
+            // When custom x-range is set, use it for cutoff (with some padding for smoothing)
+            if (customXMin !== null) {
+                // Add 90 days padding before customXMin to support smoothing calculations
+                return new Date(customXMin - 90 * 24 * 60 * 60 * 1000);
+            }
             if (timeRangeDays === 0) return null;  // All time
             const cutoff = new Date();
             cutoff.setDate(cutoff.getDate() - timeRangeDays);
             return cutoff;
+        }
+
+        // Get visible time range bounds for stats (respects custom zoom)
+        function getVisibleTimeRange() {
+            if (customXMin !== null) {
+                return { min: new Date(customXMin), max: new Date(customXMax) };
+            }
+            if (timeRangeDays === 0) return { min: null, max: null };  // All time
+            const max = new Date();
+            const min = new Date();
+            min.setDate(min.getDate() - timeRangeDays);
+            return { min, max };
         }
 
         function classifyJob(name) {
@@ -1752,7 +1770,7 @@
                 return;
             }
 
-            const cutoff = getTimeRangeCutoff();
+            const { min: rangeMin, max: rangeMax } = getVisibleTimeRange();
 
             // First, compute all stats for each job
             const jobStats = [];
@@ -1760,7 +1778,7 @@
                 const job = data.jobs[jobName];
                 if (!job) continue;
 
-                const filtered = filterRunsByState(job.recent, cutoff);
+                const filtered = filterRunsByState(job.recent, rangeMin, rangeMax);
                 if (filtered.length === 0) continue;
 
                 const durations = filtered.map(r => r.duration);
