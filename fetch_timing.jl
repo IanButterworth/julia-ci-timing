@@ -373,7 +373,7 @@ function main()
     @info "Extracting job timings..."
     master_timings = extract_job_timings(builds, "julia-master")
     scheduled_timings = extract_job_timings(scheduled_builds, "julia-master-scheduled")
-    
+
     # Merge timings from both pipelines
     job_timings = master_timings
     for (name, timings) in scheduled_timings

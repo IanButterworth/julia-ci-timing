@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Julia CI Timing</title>
-    <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/JuliaLang/julia-logo-graphics/master/images/julia-dots.svg">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
@@ -354,14 +354,14 @@
         .stats-bar tr:hover { background: var(--color-neutral-muted); }
 
         .loading { padding: 20px; text-align: center; color: var(--color-fg-muted); }
-        .loading-overlay { 
-            position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            background: var(--color-canvas-default); 
-            z-index: 10; 
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-canvas-default);
+            z-index: 10;
         }
         .error { color: var(--color-danger-fg); }
 
@@ -1666,8 +1666,8 @@
                 `https://github.com/JuliaLang/julia/commit/${meta.commit}`;
 
             // Use stored pipeline, with fallback heuristic for old data
-            const pipeline = meta.pipeline || 
-                (meta.job.toLowerCase().includes('coverage') || meta.job.toLowerCase().includes('srcassert') 
+            const pipeline = meta.pipeline ||
+                (meta.job.toLowerCase().includes('coverage') || meta.job.toLowerCase().includes('srcassert')
                     ? 'julia-master-scheduled' : 'julia-master');
             document.getElementById('popup-buildkite-link').href =
                 `https://buildkite.com/julialang/${pipeline}/builds/${meta.build}`;
