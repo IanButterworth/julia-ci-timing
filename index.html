@@ -849,6 +849,7 @@
         }
 
         function formatDuration(seconds) {
+            if (seconds == null) return '<span style="color: var(--color-fg-muted)">—</span>';
             if (seconds < 60) return `${seconds.toFixed(1)}s`;
             const mins = Math.floor(seconds / 60);
             const secs = (seconds % 60).toFixed(0);
@@ -2099,17 +2100,19 @@
 
                 // Duration stats from passed runs only
                 const passedRuns = filtered.filter(r => (r.state || 'passed') === 'passed');
-                if (passedRuns.length === 0) continue;
-
-                const durations = passedRuns.map(r => r.duration);
-                const sorted = [...durations].sort((a, b) => a - b);
-                const median = sorted[Math.floor(sorted.length / 2)];
-                const mean = durations.reduce((a, b) => a + b, 0) / durations.length;
-                const min = Math.min(...durations);
-                const max = Math.max(...durations);
-                const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
-                const std = Math.sqrt(variance);
-                const trend = computeTrend(passedRuns);
+                
+                let median = null, mean = null, min = null, max = null, std = null, trend = null;
+                if (passedRuns.length > 0) {
+                    const durations = passedRuns.map(r => r.duration);
+                    const sorted = [...durations].sort((a, b) => a - b);
+                    median = sorted[Math.floor(sorted.length / 2)];
+                    mean = durations.reduce((a, b) => a + b, 0) / durations.length;
+                    min = Math.min(...durations);
+                    max = Math.max(...durations);
+                    const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
+                    std = Math.sqrt(variance);
+                    trend = computeTrend(passedRuns);
+                }
 
                 jobStats.push({
                     jobName,
@@ -2226,7 +2229,7 @@
                     <td class="duration">${formatDuration(mean)}</td>
                     <td class="duration">${formatDuration(min)}</td>
                     <td class="duration">${formatDuration(max)}</td>
-                    <td class="duration">±${formatDuration(std)}</td>
+                    <td class="duration">${std != null ? '±' + formatDuration(std) : formatDuration(null)}</td>
                     <td>${formatTrend(trend)}</td>
                     <td>${n}</td>
                 `;
