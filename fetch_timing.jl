@@ -117,7 +117,7 @@ function job_duration_seconds(job)
     return Dates.value(end_dt - start_dt) / 1000  # milliseconds to seconds
 end
 
-function extract_job_timings(builds)
+function extract_job_timings(builds, pipeline::String)
     # Group job durations by job name
     job_timings = Dict{String, Vector{@NamedTuple{
         commit::String,
@@ -127,7 +127,8 @@ function extract_job_timings(builds)
         message::String,
         author::String,
         state::String,
-        agent::String
+        agent::String,
+        pipeline::String
     }}}()
 
     for build in builds
@@ -183,7 +184,8 @@ function extract_job_timings(builds)
                 message = message,
                 author = author,
                 state = job_state,
-                agent = agent_hostname
+                agent = agent_hostname,
+                pipeline = pipeline
             )
 
             if haskey(job_timings, name)
@@ -265,6 +267,7 @@ function generate_json_output(job_timings; output_dir="data")
                 "date" => Dates.format(t.created_at, dateformat"yyyy-mm-dd HH:MM"),
                 "duration" => round(t.duration_seconds, digits=1),
                 "message" => t.message,
+                "pipeline" => t.pipeline,
                 "state" => t.state
             )
             for t in new_timings
@@ -286,6 +289,7 @@ function generate_json_output(job_timings; output_dir="data")
                         "date" => get(old, :date, ""),
                         "duration" => get(old, :duration, 0.0),
                         "message" => get(old, :message, ""),
+                        "pipeline" => get(old, :pipeline, "julia-master"),
                         "state" => get(old, :state, "passed")
                     ))
                 end
@@ -361,16 +365,24 @@ function main()
     scheduled_builds = fetch_scheduled_builds(; max_pages=10, known_builds=known.scheduled)
     @info "Fetched new julia-master-scheduled builds" count=length(scheduled_builds)
 
-    all_builds = vcat(builds, scheduled_builds)
-    @info "Total new builds" count=length(all_builds)
-
-    if isempty(all_builds) && isempty(known.master) && isempty(known.scheduled)
+    if isempty(builds) && isempty(scheduled_builds) && isempty(known.master) && isempty(known.scheduled)
         @error "No builds fetched and no existing data - check your token and permissions"
         return 1
     end
 
     @info "Extracting job timings..."
-    job_timings = extract_job_timings(all_builds)
+    master_timings = extract_job_timings(builds, "julia-master")
+    scheduled_timings = extract_job_timings(scheduled_builds, "julia-master-scheduled")
+    
+    # Merge timings from both pipelines
+    job_timings = master_timings
+    for (name, timings) in scheduled_timings
+        if haskey(job_timings, name)
+            append!(job_timings[name], timings)
+        else
+            job_timings[name] = timings
+        end
+    end
     @info "Found jobs in new builds" count=length(job_timings)
 
     @info "Generating JSON output..."

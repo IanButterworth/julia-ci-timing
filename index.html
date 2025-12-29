@@ -1665,8 +1665,10 @@
             document.getElementById('popup-github-link').href =
                 `https://github.com/JuliaLang/julia/commit/${meta.commit}`;
 
-            // Coverage jobs are in julia-master-scheduled pipeline
-            const pipeline = meta.job.toLowerCase().includes('coverage') ? 'julia-master-scheduled' : 'julia-master';
+            // Use stored pipeline, with fallback heuristic for old data
+            const pipeline = meta.pipeline || 
+                (meta.job.toLowerCase().includes('coverage') || meta.job.toLowerCase().includes('srcassert') 
+                    ? 'julia-master-scheduled' : 'julia-master');
             document.getElementById('popup-buildkite-link').href =
                 `https://buildkite.com/julialang/${pipeline}/builds/${meta.build}`;
 
