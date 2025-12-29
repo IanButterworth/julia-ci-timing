@@ -2510,26 +2510,28 @@
 
             // Apply URL params (selection and time range) or localStorage or default
             const hasURLSelection = applyURLParams();
+            
+            // Always restore stats panel height from localStorage (independent of URL params)
+            const storedConfig = loadFromLocalStorage();
+            if (storedConfig && storedConfig.statsHeight && storedConfig.statsHeight >= 50) {
+                document.getElementById('stats-wrapper').style.height = storedConfig.statsHeight + 'px';
+            }
+            
             if (!hasURLSelection) {
-                // Try localStorage
-                const stored = loadFromLocalStorage();
-                if (stored) {
+                // Try localStorage for other settings
+                if (storedConfig) {
                     // Apply stored time range
-                    if (stored.timeRange !== undefined && [0, 7, 14, 30, 60, 90, 120, 240, 365].includes(stored.timeRange)) {
-                        timeRangeDays = stored.timeRange;
-                        document.getElementById('time-range').value = stored.timeRange;
+                    if (storedConfig.timeRange !== undefined && [0, 7, 14, 30, 60, 90, 120, 240, 365].includes(storedConfig.timeRange)) {
+                        timeRangeDays = storedConfig.timeRange;
+                        document.getElementById('time-range').value = storedConfig.timeRange;
                     }
                     // Apply stored line type
-                    if (stored.lineType && ['raw', '7', '30', '90'].includes(stored.lineType)) {
-                        lineType = stored.lineType;
-                        document.getElementById('line-type').value = stored.lineType;
-                    }
-                    // Apply stored stats panel height
-                    if (stored.statsHeight && stored.statsHeight >= 50) {
-                        document.getElementById('stats-wrapper').style.height = stored.statsHeight + 'px';
+                    if (storedConfig.lineType && ['raw', '7', '30', '90'].includes(storedConfig.lineType)) {
+                        lineType = storedConfig.lineType;
+                        document.getElementById('line-type').value = storedConfig.lineType;
                     }
                     // Apply stored selection
-                    const sel = decodeSelection(stored.selection);
+                    const sel = decodeSelection(storedConfig.selection);
                     if (sel && (sel.matrix.length > 0 || sel.special.length > 0 || sel.indices.length > 0)) {
                         for (const { platform, type } of sel.matrix) {
                             const jobs = jobMatrix[platform]?.[type] || [];
