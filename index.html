@@ -2065,15 +2065,43 @@
                 const filtered = filterRunsByState(job.recent, rangeMin, rangeMax);
                 if (filtered.length === 0) continue;
 
-                // Collect agent counts
+                // Collect agent counts from all runs in range (not just filtered by state)
+                const allRunsInRange = job.recent.filter(r => {
+                    const date = new Date(r.date);
+                    return date >= rangeMin && date <= rangeMax &&
+                           (excludedHosts.size === 0 || !excludedHosts.has(r.agent));
+                });
                 const agentCounts = {};
-                for (const r of filtered) {
+                for (const r of allRunsInRange) {
                     const agent = r.agent || '';
                     if (agent) agentCounts[agent] = (agentCounts[agent] || 0) + 1;
                 }
                 const agents = Object.entries(agentCounts).sort((a, b) => b[1] - a[1]);  // Sort by count desc
 
-                const durations = filtered.map(r => r.duration);
+                // Calculate pass rate from all runs in range (ignoring state filter)
+                let prPassed = 0, prFailed = 0, prTimedOut = 0, prCanceled = 0;
+                for (const r of allRunsInRange) {
+                    const state = r.state || 'passed';
+                    if (state === 'passed') prPassed++;
+                    else if (state === 'failed') prFailed++;
+                    else if (state === 'timed_out') prTimedOut++;
+                    else if (state === 'canceled') prCanceled++;
+                }
+                const prTotal = allRunsInRange.length;
+                const pr = prTotal > 0 ? {
+                    total: prTotal,
+                    passed: prPassed,
+                    failed: prFailed,
+                    timedOut: prTimedOut,
+                    canceled: prCanceled,
+                    rate: prPassed / prTotal
+                } : null;
+
+                // Duration stats from passed runs only
+                const passedRuns = filtered.filter(r => (r.state || 'passed') === 'passed');
+                if (passedRuns.length === 0) continue;
+
+                const durations = passedRuns.map(r => r.duration);
                 const sorted = [...durations].sort((a, b) => a - b);
                 const median = sorted[Math.floor(sorted.length / 2)];
                 const mean = durations.reduce((a, b) => a + b, 0) / durations.length;
@@ -2081,8 +2109,7 @@
                 const max = Math.max(...durations);
                 const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
                 const std = Math.sqrt(variance);
-                const trend = computeTrend(filtered);
-                const pr = jobPassRates[jobName];
+                const trend = computeTrend(passedRuns);
 
                 jobStats.push({
                     jobName,
@@ -2095,7 +2122,7 @@
                     std,
                     trend,
                     pr,
-                    n: filtered.length
+                    n: passedRuns.length
                 });
             }
 
@@ -2180,7 +2207,7 @@
                     if (pr.timedOut > 0) parts.push(`${pr.timedOut} timed out`);
                     if (pr.canceled > 0) parts.push(`${pr.canceled} canceled`);
                     const breakdown = parts.length > 0 ? parts.join(', ') : 'all passed';
-                    passRateHtml = `<span style="color: ${prColor}" title="${breakdown} out of ${pr.total} in last ${PASS_RATE_DAYS} days">${icon}${pct}%</span>`;
+                    passRateHtml = `<span style="color: ${prColor}" title="${breakdown} out of ${pr.total} in selected range">${icon}${pct}%</span>`;
                 }
 
                 const isExpanded = expandedJobs.has(jobName);
@@ -2208,7 +2235,6 @@
                 // Add host detail rows if expanded
                 if (isExpanded && hasMultipleHosts) {
                     const job = data.jobs[jobName];
-                    const filtered = filterRunsByState(job.recent, rangeMin, rangeMax);
                     const maxShift = 20;
 
                     for (let i = 0; i < agents.length; i++) {
@@ -2218,31 +2244,62 @@
                             : 0;
                         const hostColor = shiftHue(color, hueShift);
 
-                        // Calculate stats for this host only
-                        const hostRuns = filtered.filter(r => r.agent === agent);
-                        const hostDurations = hostRuns.map(r => r.duration);
+                        // Calculate stats for this host only (passed runs only for duration stats)
+                        const allHostRuns = job.recent.filter(r => {
+                            if (r.agent !== agent) return false;
+                            const date = new Date(r.date);
+                            return date >= rangeMin && date <= rangeMax;
+                        });
+                        const hostPassedRuns = allHostRuns.filter(r => (r.state || 'passed') === 'passed');
+                        const hostDurations = hostPassedRuns.map(r => r.duration);
                         const hostSorted = [...hostDurations].sort((a, b) => a - b);
-                        const hostMedian = hostSorted[Math.floor(hostSorted.length / 2)];
-                        const hostMean = hostDurations.reduce((a, b) => a + b, 0) / hostDurations.length;
-                        const hostMin = Math.min(...hostDurations);
-                        const hostMax = Math.max(...hostDurations);
-                        const hostVariance = hostDurations.reduce((sum, d) => sum + (d - hostMean) ** 2, 0) / hostDurations.length;
+                        const hostMedian = hostDurations.length > 0 ? hostSorted[Math.floor(hostSorted.length / 2)] : 0;
+                        const hostMean = hostDurations.length > 0 ? hostDurations.reduce((a, b) => a + b, 0) / hostDurations.length : 0;
+                        const hostMin = hostDurations.length > 0 ? Math.min(...hostDurations) : 0;
+                        const hostMax = hostDurations.length > 0 ? Math.max(...hostDurations) : 0;
+                        const hostVariance = hostDurations.length > 0 ? hostDurations.reduce((sum, d) => sum + (d - hostMean) ** 2, 0) / hostDurations.length : 0;
                         const hostStd = Math.sqrt(hostVariance);
-                        const hostTrend = computeTrend(hostRuns);
+                        const hostTrend = computeTrend(hostPassedRuns);
+                        const hostN = hostPassedRuns.length;
+
+                        // Calculate pass rate for this host from all runs in time range
+                        let hostPrHtml = '<span style="color: var(--color-fg-muted)">—</span>';
+                        const hostTotal = allHostRuns.length;
+                        if (hostTotal > 0) {
+                            let hostPassed = 0, hostFailed = 0, hostTimedOut = 0, hostCanceled = 0;
+                            for (const run of allHostRuns) {
+                                const state = run.state || 'passed';
+                                if (state === 'passed') hostPassed++;
+                                else if (state === 'failed') hostFailed++;
+                                else if (state === 'timed_out') hostTimedOut++;
+                                else if (state === 'canceled') hostCanceled++;
+                            }
+                            const hostRate = hostPassed / hostTotal;
+                            const hostPct = Math.round(hostRate * 100);
+                            const isLow = hostTotal >= PASS_RATE_MIN_RUNS && hostRate < PASS_RATE_THRESHOLD;
+                            const hostPrColor = isLow ? 'var(--color-danger-fg)' : (hostRate < 1 ? 'var(--color-attention-fg)' : 'var(--color-success-fg)');
+                            const hostIcon = isLow ? '⚠️ ' : '';
+                            const parts = [];
+                            if (hostFailed > 0) parts.push(`${hostFailed} failed`);
+                            if (hostTimedOut > 0) parts.push(`${hostTimedOut} timed out`);
+                            if (hostCanceled > 0) parts.push(`${hostCanceled} canceled`);
+                            const breakdown = parts.length > 0 ? parts.join(', ') : 'all passed';
+                            hostPrHtml = `<span style="color: ${hostPrColor}" title="${breakdown} out of ${hostTotal} in selected range">${hostIcon}${hostPct}%</span>`;
+                        }
 
                         const hostRow = document.createElement('tr');
                         hostRow.className = 'host-row';
                         hostRow.innerHTML = `
                             <td><span class="color-dot" style="background: ${hostColor}"></span> ${agent}</td>
                             <td></td>
-                            <td></td>
+                            <td>${hostPrHtml}</td>
                             <td class="duration">${formatDuration(hostMedian)}</td>
                             <td class="duration">${formatDuration(hostMean)}</td>
                             <td class="duration">${formatDuration(hostMin)}</td>
                             <td class="duration">${formatDuration(hostMax)}</td>
                             <td class="duration">±${formatDuration(hostStd)}</td>
                             <td>${formatTrend(hostTrend)}</td>
-                            <td>${count}</td>
+                            <td>${hostN}</td>
                         `;
                         tbody.appendChild(hostRow);
                     }
