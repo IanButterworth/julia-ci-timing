@@ -126,6 +126,65 @@
             color: var(--color-fg-default);
             cursor: pointer;
         }
+        .checkbox-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .checkbox-dropdown-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: var(--color-btn-bg);
+            border: 1px solid var(--color-btn-border);
+            border-radius: 6px;
+            color: var(--color-fg-default);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .checkbox-dropdown-btn:hover { background: var(--color-btn-hover-bg); }
+        .checkbox-dropdown-btn::after {
+            content: '▾';
+            font-size: 10px;
+            opacity: 0.6;
+        }
+        .checkbox-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 2px;
+            background: var(--color-canvas-default);
+            border: 1px solid var(--color-border-default);
+            border-radius: 6px;
+            box-shadow: var(--color-overlay-shadow);
+            z-index: 1000;
+            min-width: 180px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .checkbox-dropdown.open .checkbox-dropdown-menu { display: block; }
+        .checkbox-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .checkbox-dropdown-item:hover { background: var(--color-neutral-muted); }
+        .checkbox-dropdown-item input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+        .checkbox-dropdown-divider {
+            height: 1px;
+            background: var(--color-border-muted);
+            margin: 4px 0;
+        }
         .btn.primary {
             background: var(--color-btn-primary-bg);
             border-color: var(--color-btn-primary-border);
@@ -522,6 +581,9 @@
             <option value="30" selected>Last 30 days</option>
             <option value="60">Last 60 days</option>
             <option value="90">Last 90 days</option>
+            <option value="120">Last 120 days</option>
+            <option value="240">Last 240 days</option>
+            <option value="365">Last 365 days</option>
             <option value="0">All time</option>
         </select>
         <button class="btn" id="btn-reset-zoom" onclick="resetZoom()" aria-label="Reset zoom" style="display: none;">Reset</button>
@@ -531,11 +593,23 @@
             <option value="30">30-day avg</option>
             <option value="90">90-day avg</option>
         </select>
-        <select class="time-select" id="state-filter" onchange="setStateFilter(this.value)" aria-label="State filter">
-            <option value="all" selected>All states</option>
-            <option value="passed">Passed only</option>
-            <option value="failed">Failed only</option>
-        </select>
+        <div class="checkbox-dropdown" id="state-filter-dropdown">
+            <button class="checkbox-dropdown-btn" onclick="toggleStateDropdown(event)" aria-label="State filter">
+                <span id="state-filter-label">All states</span>
+            </button>
+            <div class="checkbox-dropdown-menu" id="state-filter-menu">
+                <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('passed', this)"> Passed</label>
+                <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('failed', this)"> Failed</label>
+                <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('timed_out', this)"> Timed out</label>
+                <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('canceled', this)"> Canceled</label>
+            </div>
+        </div>
+        <div class="checkbox-dropdown" id="host-filter-dropdown">
+            <button class="checkbox-dropdown-btn" onclick="toggleHostDropdown(event)" aria-label="Host filter">
+                <span id="host-filter-label">All hosts</span>
+            </button>
+            <div class="checkbox-dropdown-menu" id="host-filter-menu"></div>
+        </div>
         <span class="updated" id="last-updated" aria-live="polite"></span>
         <a href="https://github.com/JuliaCI/julia-ci-timing/commit/__BUILD_COMMIT__" target="_blank" class="updated" id="build-commit" title="Site build commit" style="text-decoration: none;">__BUILD_COMMIT_SHORT__</a>
         <a href="https://github.com/JuliaCI/julia-ci-timing" target="_blank" class="btn btn-link" aria-label="View source on GitHub">GitHub</a>
@@ -606,16 +680,14 @@
 
         // === Constants ===
         const FAILED_STATES = ['failed', 'timed_out', 'canceled'];
-        const VALID_TIME_RANGES = [0, 7, 14, 30, 60, 90];
+        const VALID_TIME_RANGES = [0, 7, 14, 30, 60, 90, 120, 240, 365];
 
         // Stats table sorting state
         let statsTableSortColumn = 'median';
         let statsTableSortAsc = false;  // false = descending (largest first)
         const VALID_LINE_TYPES = ['raw', '7', '30', '90'];
-        const VALID_STATE_FILTERS = ['all', 'passed', 'failed'];
         const DEFAULT_TIME_RANGE = 30;
         const DEFAULT_LINE_TYPE = '7';
-        const DEFAULT_STATE_FILTER = 'all';
         const STORAGE_KEY = 'julia-ci-timing-config';
         const DATA_REFRESH_INTERVAL = 5 * 60 * 1000;  // 5 minutes
         const AGO_UPDATE_INTERVAL = 60 * 1000;        // 1 minute
@@ -626,7 +698,8 @@
         let selectedJobs = new Set();
         let timeRangeDays = DEFAULT_TIME_RANGE;
         let lineType = DEFAULT_LINE_TYPE;
-        let stateFilter = DEFAULT_STATE_FILTER;
+        let excludedStates = new Set();  // States to exclude from display
+        let excludedHosts = new Set();  // Hosts to exclude from display
         let jobColors = {};
         let chartMetadata = {};
         // Custom zoom state (null = use timeRangeDays preset)
@@ -642,6 +715,7 @@
         function refreshAllUI() {
             updateMatrixHighlights();
             updateJobCount();
+            updateHostFilterUI();
             updateChart();
             updateStatsTable();
             updateToolbarButtons();
@@ -906,14 +980,14 @@
             return `<span style="color: ${color}" title="${title}">${arrow} ${displayText} ${confidence}</span>`;
         }
 
-        function filterRunsByState(runs, cutoff, maxCutoff = null) {
+        function filterRunsByState(runs, cutoff, maxCutoff = null, filterHosts = true) {
             return runs.filter(r => {
                 const date = new Date(r.date);
                 if (cutoff && date < cutoff) return false;
                 if (maxCutoff && date > maxCutoff) return false;
                 const runState = getRunState(r);
-                if (stateFilter === 'passed' && runState !== 'passed') return false;
-                if (stateFilter === 'failed' && !isFailedState(runState)) return false;
+                if (excludedStates.size > 0 && excludedStates.has(runState)) return false;
+                if (filterHosts && excludedHosts.size > 0 && excludedHosts.has(r.agent)) return false;
                 return true;
             });
         }
@@ -1062,12 +1136,6 @@
             } else {
                 url.searchParams.delete('l');
             }
-            // Add state filter if not default
-            if (stateFilter !== DEFAULT_STATE_FILTER) {
-                url.searchParams.set('f', stateFilter);
-            } else {
-                url.searchParams.delete('f');
-            }
             history.replaceState(null, '', url);
             saveToLocalStorage();
         }
@@ -1078,7 +1146,6 @@
                 selection: encodeSelection(),
                 timeRange: timeRangeDays,
                 lineType: lineType,
-                stateFilter: stateFilter,
                 statsHeight: statsWrapper ? statsWrapper.offsetHeight : 150
             };
             try {
@@ -1140,13 +1207,6 @@
                 document.getElementById('line-type').value = l;
             }
 
-            // Apply state filter
-            const f = params.get('f');
-            if (f !== null && VALID_STATE_FILTERS.includes(f)) {
-                stateFilter = f;
-                document.getElementById('state-filter').value = f;
-            }
-
             // Apply selection
             const sel = decodeSelection(params.get('s'));
             if (!sel) return false;
@@ -1170,6 +1230,7 @@
             timeRangeDays = parseInt(days, 10);
             // Clear custom zoom when selecting a preset
             clearCustomZoom();
+            updateHostFilterUI();
             updateChart();
             updateStatsTable();
             updateURL();
@@ -1200,6 +1261,10 @@
         function handleZoomPanComplete({ chart }) {
             const xAxis = chart.scales.x;
             const yAxis = chart.scales.y;
+            // Guard against invalid values when chart has no data
+            if (!isFinite(xAxis.min) || !isFinite(xAxis.max) || !isFinite(yAxis.min) || !isFinite(yAxis.max)) {
+                return;
+            }
             setCustomZoom(
                 Math.round(xAxis.min),
                 Math.round(xAxis.max),
@@ -1220,11 +1285,160 @@
             updateURL();
         }
 
-        function setStateFilter(state) {
-            stateFilter = state;
+        function toggleStateDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('state-filter-dropdown');
+            dropdown.classList.toggle('open');
+            // Close host dropdown if open
+            document.getElementById('host-filter-dropdown')?.classList.remove('open');
+        }
+
+        function toggleStateFilter(state, checkbox) {
+            if (excludedStates.has(state)) {
+                excludedStates.delete(state);
+            } else {
+                excludedStates.add(state);
+            }
+            updateStateFilterLabel();
             updateChart();
             updateStatsTable();
-            updateURL();
+        }
+
+        function updateStateFilterLabel() {
+            const label = document.getElementById('state-filter-label');
+            const allStates = ['passed', 'failed', 'timed_out', 'canceled'];
+            const visibleCount = allStates.length - excludedStates.size;
+            if (excludedStates.size === 0) {
+                label.textContent = 'All states';
+            } else if (visibleCount === 0) {
+                label.textContent = 'No states';
+            } else if (visibleCount === 1) {
+                const visible = allStates.find(s => !excludedStates.has(s));
+                const names = { passed: 'Passed', failed: 'Failed', timed_out: 'Timed out', canceled: 'Canceled' };
+                label.textContent = names[visible] + ' only';
+            } else {
+                label.textContent = `States (${visibleCount}/${allStates.length})`;
+            }
+        }
+
+        function toggleHostFilter(host, checkbox) {
+            if (excludedHosts.has(host)) {
+                excludedHosts.delete(host);
+            } else {
+                excludedHosts.add(host);
+            }
+            updateHostFilterLabel();
+            updateChart();
+            updateStatsTable();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const hostDropdown = document.getElementById('host-filter-dropdown');
+            const stateDropdown = document.getElementById('state-filter-dropdown');
+            if (hostDropdown && !hostDropdown.contains(e.target)) {
+                hostDropdown.classList.remove('open');
+            }
+            if (stateDropdown && !stateDropdown.contains(e.target)) {
+                stateDropdown.classList.remove('open');
+            }
+        });
+
+        function toggleHostDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('host-filter-dropdown');
+            dropdown.classList.toggle('open');
+            // Close state dropdown if open
+            document.getElementById('state-filter-dropdown')?.classList.remove('open');
+        }
+
+        function toggleHostFilter(host, checkbox) {
+            if (excludedHosts.has(host)) {
+                excludedHosts.delete(host);
+            } else {
+                excludedHosts.add(host);
+            }
+            updateHostFilterLabel();
+            updateChart();
+            updateStatsTable();
+        }
+
+        function setAllHostsVisible(visible) {
+            const allHosts = getAllHostsFromSelectedJobs();
+            if (visible) {
+                excludedHosts.clear();
+            } else {
+                for (const host of allHosts) {
+                    excludedHosts.add(host);
+                }
+            }
+            updateHostFilterUI();
+            updateChart();
+            updateStatsTable();
+        }
+
+        function updateHostFilterLabel() {
+            const label = document.getElementById('host-filter-label');
+            const allHosts = getAllHostsFromSelectedJobs();
+            const excludedCount = excludedHosts.size;
+            const visibleCount = allHosts.length - excludedCount;
+            if (excludedCount === 0 || allHosts.length === 0) {
+                label.textContent = 'All hosts';
+            } else if (visibleCount === 0) {
+                label.textContent = 'No hosts';
+            } else {
+                label.textContent = `Hosts (${visibleCount}/${allHosts.length})`;
+            }
+        }
+
+        function updateHostFilterUI() {
+            const menu = document.getElementById('host-filter-menu');
+            if (!data || !menu) return;
+            const allHosts = getAllHostsFromSelectedJobs();
+
+            menu.innerHTML = '';
+
+            // Add "Select all" / "Select none" controls
+            const selectAllItem = document.createElement('label');
+            selectAllItem.className = 'checkbox-dropdown-item';
+            selectAllItem.innerHTML = `<input type="checkbox" ${excludedHosts.size === 0 ? 'checked' : ''} onchange="setAllHostsVisible(this.checked)"> Select all`;
+            menu.appendChild(selectAllItem);
+
+            if (allHosts.length > 0) {
+                const divider = document.createElement('div');
+                divider.className = 'checkbox-dropdown-divider';
+                menu.appendChild(divider);
+            }
+
+            // Add individual host checkboxes
+            for (const host of allHosts) {
+                const item = document.createElement('label');
+                item.className = 'checkbox-dropdown-item';
+                const included = !excludedHosts.has(host);
+                item.innerHTML = `<input type="checkbox" ${included ? 'checked' : ''} onchange="toggleHostFilter('${host.replace(/'/g, "\\'")}', this)"> ${host}`;
+                menu.appendChild(item);
+            }
+
+            updateHostFilterLabel();
+        }
+
+        function getAllHostsFromSelectedJobs() {
+            const hosts = new Set();
+            const cutoff = getTimeRangeCutoff();
+            for (const jobName of selectedJobs) {
+                const job = data?.jobs?.[jobName];
+                if (!job) continue;
+                for (const run of job.recent) {
+                    const date = new Date(run.date);
+                    if (cutoff && date < cutoff) continue;
+                    if (run.agent) hosts.add(run.agent);
+                }
+            }
+            // Clean up excluded hosts that no longer exist
+            for (const host of excludedHosts) {
+                if (!hosts.has(host)) excludedHosts.delete(host);
+            }
+            return [...hosts].sort();
         }
 
         function getTimeRangeCutoff() {
@@ -1350,8 +1564,8 @@
                     const date = new Date(run.date);
                     if (cutoff && date < cutoff) continue;
                     const runState = getRunState(run);
-                    if (stateFilter === 'passed' && runState !== 'passed') continue;
-                    if (stateFilter === 'failed' && !isFailedState(runState)) continue;
+                    if (excludedStates.size > 0 && excludedStates.has(runState)) continue;
+                    if (excludedHosts.size > 0 && excludedHosts.has(run.agent)) continue;
                     points.push({
                         x: date,
                         y: run.duration,
@@ -1510,6 +1724,17 @@
             const gridColor = isDark ? '#30363d' : '#d0d7de';
             const textColor = isDark ? '#8b949e' : '#656d76';
 
+            // Calculate x-axis bounds based on time range or custom zoom
+            let xMin, xMax;
+            if (customXMin !== null) {
+                xMin = customXMin;
+                xMax = customXMax;
+            } else if (timeRangeDays > 0) {
+                xMax = Date.now();
+                xMin = xMax - timeRangeDays * 24 * 60 * 60 * 1000;
+            }
+            // For "All time" (timeRangeDays === 0), leave undefined to auto-scale
+
             const ctx = document.getElementById('timing-chart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
@@ -1605,8 +1830,8 @@
                     scales: {
                         x: {
                             type: 'time',
-                            min: customXMin || undefined,
-                            max: customXMax || undefined,
+                            min: xMin,
+                            max: xMax,
                             time: {
                                 displayFormats: {
                                     day: 'MMM d',
@@ -2144,7 +2369,7 @@
                 const stored = loadFromLocalStorage();
                 if (stored) {
                     // Apply stored time range
-                    if (stored.timeRange !== undefined && [0, 7, 14, 30, 60, 90].includes(stored.timeRange)) {
+                    if (stored.timeRange !== undefined && [0, 7, 14, 30, 60, 90, 120, 240, 365].includes(stored.timeRange)) {
                         timeRangeDays = stored.timeRange;
                         document.getElementById('time-range').value = stored.timeRange;
                     }
@@ -2152,11 +2377,6 @@
                     if (stored.lineType && ['raw', '7', '30', '90'].includes(stored.lineType)) {
                         lineType = stored.lineType;
                         document.getElementById('line-type').value = stored.lineType;
-                    }
-                    // Apply stored state filter
-                    if (stored.stateFilter && ['all', 'passed', 'failed'].includes(stored.stateFilter)) {
-                        stateFilter = stored.stateFilter;
-                        document.getElementById('state-filter').value = stored.stateFilter;
                     }
                     // Apply stored stats panel height
                     if (stored.statsHeight && stored.statsHeight >= 50) {
