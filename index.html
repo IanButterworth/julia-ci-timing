@@ -3290,6 +3290,13 @@
                     buildJobMatrix();
                     buildJobIndex();
                     
+                    // Reassign colors for any new jobs from complete data
+                    const allJobs = Object.keys(data.jobs);
+                    const colors = generateColors(allJobs.length);
+                    allJobs.forEach((name, i) => {
+                        jobColors[name] = colors[i];
+                    });
+                    
                     // Re-apply URL params with complete data to get full selection
                     // (partial data may have missed some jobs in matrix cells)
                     selectedJobs.clear();
