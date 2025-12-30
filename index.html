@@ -848,6 +848,25 @@
             return baseColor;
         }
 
+        // Get perceptual hue spread multiplier based on base hue
+        // Human perception of hue variation is non-uniform - greens need
+        // slightly larger shifts to appear distinct
+        function getPerceptualHueMultiplier(baseHue) {
+            // Normalize hue to 0-360
+            const h = ((baseHue % 360) + 360) % 360;
+            // Green region needs modestly larger shifts
+            if (h >= 80 && h < 140) return 1.9;   // Green
+            if (h >= 50 && h < 80) return 1.4;    // Yellow-green
+            if (h >= 140 && h < 180) return 1.3;  // Cyan-green
+            return 1.0;  // Others have good discrimination
+        }
+
+        // Extract hue from an HSL color string
+        function getHueFromColor(color) {
+            const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            return hslMatch ? parseInt(hslMatch[1]) : 0;
+        }
+
         function formatDuration(seconds) {
             if (seconds == null) return '<span style="color: var(--color-fg-muted)">—</span>';
             if (seconds < 60) return `${seconds.toFixed(1)}s`;
@@ -1664,12 +1683,14 @@
                     return canvas;
                 };
 
-                // Generate per-point colors with maximally distinct hue shifts per agent
+                // Generate per-point colors with perceptually-adjusted hue shifts per agent
                 const uniqueAgents = [...new Set(points.map(p => p.meta.agent || ''))];
                 const agentHueShifts = {};
-                const maxShift = 20;  // ±20 degrees range
+                const baseShift = 20;  // Base ±20 degrees range
+                const baseHue = getHueFromColor(color);
+                const maxShift = baseShift * getPerceptualHueMultiplier(baseHue);
                 uniqueAgents.forEach((agent, i) => {
-                    // Distribute shifts evenly across the range
+                    // Distribute shifts evenly across the perceptually-adjusted range
                     agentHueShifts[agent] = uniqueAgents.length > 1
                         ? -maxShift + (2 * maxShift * i / (uniqueAgents.length - 1))
                         : 0;
@@ -2423,10 +2444,12 @@
             for (const stat of jobStats) {
                 const { jobName, color, agents, median, mean, min, max, std, trend, pr, n } = stat;
 
-                // Build hosts HTML with hue-shifted colors
+                // Build hosts HTML with perceptually-adjusted hue-shifted colors
                 let hostsHtml = '';
                 if (agents.length > 0) {
-                    const maxShift = 20;
+                    const baseShift = 20;
+                    const baseHue = getHueFromColor(color);
+                    const maxShift = baseShift * getPerceptualHueMultiplier(baseHue);
                     const hostDots = agents.map(([agent, count], i) => {
                         const hueShift = agents.length > 1
                             ? -maxShift + (2 * maxShift * i / (agents.length - 1))
@@ -2478,7 +2501,9 @@
                 // Add host detail rows if expanded
                 if (isExpanded && hasMultipleHosts) {
                     const job = data.jobs[jobName];
-                    const maxShift = 20;
+                    const baseShift = 20;
+                    const baseHue = getHueFromColor(color);
+                    const maxShift = baseShift * getPerceptualHueMultiplier(baseHue);
 
                     for (let i = 0; i < agents.length; i++) {
                         const [agent, count] = agents[i];
