@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Julia CI Timing</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="favicon.svg">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
@@ -265,6 +268,37 @@
             cursor: default;
         }
 
+        /* Collapsible section header */
+        .section-header {
+            display: none; /* Only show on mobile */
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-fg-muted);
+            background: var(--color-canvas-inset);
+            border-bottom: 1px solid var(--color-border-default);
+            cursor: pointer;
+            user-select: none;
+        }
+        .section-header::after {
+            content: ' ▼';
+            font-size: 10px;
+            transition: transform 0.2s ease;
+            display: inline-block;
+            margin-left: 4px;
+        }
+        .section-header.collapsed::after {
+            transform: rotate(-90deg);
+        }
+        .collapsible-content {
+            transition: max-height 0.25s ease, opacity 0.2s ease;
+            overflow: hidden;
+        }
+        .collapsible-content.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+        }
+
         /* Job list below matrix */
         .job-list-section {
             border-top: 1px solid var(--color-border-default);
@@ -334,6 +368,9 @@
             left: 12px;
             right: 12px;
             bottom: 12px;
+        }
+        .chart-wrapper canvas {
+            touch-action: none; /* Let Chart.js handle all touch events */
         }
 
         /* Stats bar */
@@ -505,7 +542,7 @@
         }
         .popup-info a code:hover { background: var(--color-btn-hover-bg); }
 
-        /* Mobile responsive */
+        /* Tablet responsive */
         @media (max-width: 768px) {
             html, body { overflow: auto; }
             body { height: auto; min-height: 100vh; }
@@ -593,6 +630,171 @@
                 max-width: calc(100vw - 32px);
             }
         }
+
+        /* Phone responsive (narrow touchscreens) */
+        @media (max-width: 480px) {
+            .toolbar {
+                padding: 4px 8px;
+                gap: 3px;
+            }
+            .toolbar h1 {
+                font-size: 11px;
+                width: auto;
+                margin-bottom: 0;
+                margin-right: 4px;
+            }
+            .toolbar h1 a:first-of-type {
+                display: none; /* Hide "JuliaLang /" on narrow screens */
+            }
+            .julia-logo {
+                height: 14px;
+            }
+            .btn, .time-select {
+                padding: 6px 8px; /* Taller touch targets */
+                font-size: 11px;
+                min-height: 32px;
+            }
+            .checkbox-dropdown-btn {
+                padding: 6px 8px;
+                min-height: 32px;
+                font-size: 11px;
+            }
+            .checkbox-dropdown-menu {
+                min-width: 140px;
+            }
+            .checkbox-dropdown-item {
+                padding: 10px 12px; /* Larger touch targets */
+                font-size: 13px;
+            }
+            #btn-all, #btn-none {
+                flex: 1;
+                min-width: 0;
+            }
+            .toolbar .updated {
+                font-size: 9px;
+                margin-left: auto;
+                order: 0; /* Keep in flow */
+            }
+            #build-commit {
+                display: none;
+            }
+
+            .sidebar {
+                max-height: none;
+                overflow: visible;
+            }
+            .job-matrix {
+                padding: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .matrix-table {
+                font-size: 9px;
+            }
+            .matrix-table th, .matrix-table td {
+                padding: 4px 3px; /* Taller for touch */
+            }
+            .matrix-cell {
+                min-width: 32px;
+                min-height: 28px;
+            }
+            .job-list-section {
+                max-height: none;
+                overflow: visible;
+            }
+            .job-list {
+                -webkit-overflow-scrolling: touch;
+                max-height: 150px;
+            }
+            .job-item {
+                padding: 8px 10px; /* Larger touch targets */
+                font-size: 11px;
+            }
+
+            /* Collapsible sections on mobile */
+            .section-header {
+                display: block;
+            }
+            .job-matrix-wrapper .collapsible-content {
+                max-height: 200px;
+            }
+            .job-list-section .collapsible-content {
+                max-height: 150px;
+            }
+            .job-list-header {
+                display: none; /* Hide old header, use section-header instead */
+            }
+
+            .content {
+                min-height: 350px;
+            }
+            .chart-container {
+                min-height: 250px;
+                padding: 4px;
+            }
+            .chart-wrapper {
+                height: 240px;
+            }
+
+            .stats-wrapper {
+                max-height: 40vh;
+                height: auto !important;
+                min-height: 120px;
+            }
+            .resize-handle {
+                display: none; /* Hide resize on touch */
+            }
+            .stats-bar {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .stats-bar table {
+                min-width: 600px; /* Force horizontal scroll */
+            }
+            .stats-bar th, .stats-bar td {
+                padding: 6px 6px;
+                font-size: 10px;
+                white-space: nowrap;
+            }
+
+            .popup {
+                margin: 8px;
+                padding: 12px;
+                max-width: calc(100vw - 16px);
+                max-height: calc(100vh - 16px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .popup h3 {
+                font-size: 13px;
+            }
+            .popup-info {
+                font-size: 12px;
+            }
+            .popup-close {
+                font-size: 28px;
+                padding: 8px;
+                top: 4px;
+                right: 4px;
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .matrix-cell:active {
+                background: var(--color-accent-emphasis);
+                color: white;
+            }
+            .job-item:active {
+                background: var(--color-accent-emphasis);
+                color: white;
+            }
+            .btn:active {
+                background: var(--color-btn-active-bg);
+            }
+            .stats-bar tr:active td {
+                background: var(--color-neutral-muted);
+            }
+        }
     </style>
 </head>
 <body>
@@ -661,10 +863,18 @@
 
     <main class="main">
         <aside class="sidebar" aria-label="Job selection">
-            <div class="job-matrix" id="job-matrix" role="grid" aria-label="Platform and test type matrix"><div class="loading">Loading...</div></div>
+            <div class="job-matrix-wrapper">
+                <div class="section-header" onclick="toggleSection(this)">Platform Matrix</div>
+                <div class="collapsible-content">
+                    <div class="job-matrix" id="job-matrix" role="grid" aria-label="Platform and test type matrix"><div class="loading">Loading...</div></div>
+                </div>
+            </div>
             <div class="job-list-section">
-                <div class="job-list-header">Jobs (<span id="job-count">0/0</span>)</div>
-                <div class="job-list" id="job-list" role="listbox" aria-label="Available jobs"><div class="loading">Loading jobs...</div></div>
+                <div class="section-header" onclick="toggleSection(this)">Jobs (<span id="job-count-mobile">0/0</span>)</div>
+                <div class="collapsible-content">
+                    <div class="job-list-header">Jobs (<span id="job-count">0/0</span>)</div>
+                    <div class="job-list" id="job-list" role="listbox" aria-label="Available jobs"><div class="loading">Loading jobs...</div></div>
+                </div>
             </div>
         </aside>
         <div class="content">
@@ -1636,9 +1846,10 @@
                 });
 
                 // Create custom canvas for timed_out marker (⤒) at high DPI
-                const createTimedOutMarker = (fillColor) => {
+                const createTimedOutMarker = (fillColor, markerSize = null) => {
                     const scale = window.devicePixelRatio || 2;
-                    const size = 10;
+                    // Use smaller markers on narrow screens
+                    const size = markerSize ?? (window.innerWidth <= 480 ? 7 : 10);
                     const canvas = document.createElement('canvas');
                     canvas.width = size * scale;
                     canvas.height = size * scale;
@@ -1648,26 +1859,29 @@
                     ctx.scale(scale, scale);
                     ctx.strokeStyle = fillColor;
                     ctx.fillStyle = fillColor;
-                    ctx.lineWidth = 1.0;
+                    ctx.lineWidth = size <= 7 ? 0.8 : 1.0;
                     ctx.lineCap = 'round';
                     ctx.lineJoin = 'round';
                     const cx = size / 2;
-                    const cy = size / 2 + 1;
+                    const cy = size / 2 + (size <= 7 ? 0.7 : 1);
+                    const barHalf = size <= 7 ? 1.0 : 1.5;
+                    const stemLen = size <= 7 ? 2.8 : 4;
+                    const arrowY = size <= 7 ? 1.8 : 2.5;
                     // Horizontal bar at center
                     ctx.beginPath();
-                    ctx.moveTo(cx - 1.5, cy);
-                    ctx.lineTo(cx + 1.5, cy);
+                    ctx.moveTo(cx - barHalf, cy);
+                    ctx.lineTo(cx + barHalf, cy);
                     ctx.stroke();
                     // Vertical line (stem) - from center down
                     ctx.beginPath();
                     ctx.moveTo(cx, cy);
-                    ctx.lineTo(cx, cy + 4);
+                    ctx.lineTo(cx, cy + stemLen);
                     ctx.stroke();
                     // Arrow head just below the bar
                     ctx.beginPath();
-                    ctx.moveTo(cx - 1.5, cy + 2.5);
+                    ctx.moveTo(cx - barHalf, cy + arrowY);
                     ctx.lineTo(cx, cy);
-                    ctx.lineTo(cx + 1.5, cy + 2.5);
+                    ctx.lineTo(cx + barHalf, cy + arrowY);
                     ctx.stroke();
                     return canvas;
                 };
@@ -1701,7 +1915,9 @@
                     if (p.state === 'failed' || p.state === 'canceled') return 'crossRot';
                     return 'circle';
                 });
-                const pointRadii = points.map(p => isFailedState(p.state) ? 5 : 2);
+                // Smaller points on narrow screens
+                const isMobile = window.innerWidth <= 480;
+                const pointRadii = points.map(p => isFailedState(p.state) ? (isMobile ? 3.5 : 5) : (isMobile ? 1.5 : 2));
 
                 if (lineType === 'raw') {
                     // Single dataset with line and points
@@ -2048,7 +2264,8 @@
         // Create smaller timeout marker for de-emphasized state
         function createSmallTimedOutMarker(fillColor) {
             const scale = window.devicePixelRatio || 2;
-            const size = 5;  // Half the normal size
+            // Smaller on narrow screens: 3.5px vs 5px
+            const size = window.innerWidth <= 480 ? 3.5 : 5;
             const canvas = document.createElement('canvas');
             canvas.width = size * scale;
             canvas.height = size * scale;
@@ -2058,23 +2275,26 @@
             ctx.scale(scale, scale);
             ctx.strokeStyle = fillColor;
             ctx.fillStyle = fillColor;
-            ctx.lineWidth = 0.5;
+            ctx.lineWidth = size <= 4 ? 0.4 : 0.5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             const cx = size / 2;
-            const cy = size / 2 + 0.5;
+            const cy = size / 2 + (size <= 4 ? 0.35 : 0.5);
+            const barHalf = size <= 4 ? 0.5 : 0.75;
+            const stemLen = size <= 4 ? 1.4 : 2;
+            const arrowY = size <= 4 ? 0.9 : 1.25;
             ctx.beginPath();
-            ctx.moveTo(cx - 0.75, cy);
-            ctx.lineTo(cx + 0.75, cy);
+            ctx.moveTo(cx - barHalf, cy);
+            ctx.lineTo(cx + barHalf, cy);
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(cx, cy);
-            ctx.lineTo(cx, cy + 2);
+            ctx.lineTo(cx, cy + stemLen);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(cx - 0.75, cy + 1.25);
+            ctx.moveTo(cx - barHalf, cy + arrowY);
             ctx.lineTo(cx, cy);
-            ctx.lineTo(cx + 0.75, cy + 1.25);
+            ctx.lineTo(cx + barHalf, cy + arrowY);
             ctx.stroke();
             return canvas;
         }
@@ -2859,7 +3079,17 @@
 
         function updateJobCount() {
             const total = Object.keys(data.jobs).length;
-            document.getElementById('job-count').textContent = `${selectedJobs.size}/${total}`;
+            const countText = `${selectedJobs.size}/${total}`;
+            document.getElementById('job-count').textContent = countText;
+            const mobileCount = document.getElementById('job-count-mobile');
+            if (mobileCount) mobileCount.textContent = countText;
+        }
+
+        // Toggle collapsible section (mobile)
+        function toggleSection(header) {
+            header.classList.toggle('collapsed');
+            const content = header.nextElementSibling;
+            if (content) content.classList.toggle('collapsed');
         }
 
         function toggleMatrixCell(platform, type) {
