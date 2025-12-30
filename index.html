@@ -1644,7 +1644,7 @@
                     ctx.lineCap = 'round';
                     ctx.lineJoin = 'round';
                     const cx = size / 2;
-                    const cy = size / 2;
+                    const cy = size / 2 + 1;
                     // Horizontal bar at center
                     ctx.beginPath();
                     ctx.moveTo(cx - 1.5, cy);
@@ -1999,39 +1999,39 @@
         // Helper to convert any color to rgba with specified alpha
         function colorToRgba(color, alpha) {
             if (!color || typeof color !== 'string') return color;
-            
+
             // Handle hex colors
             const hexResult = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(color);
             if (hexResult) {
                 return `rgba(${parseInt(hexResult[1], 16)}, ${parseInt(hexResult[2], 16)}, ${parseInt(hexResult[3], 16)}, ${alpha})`;
             }
-            
+
             // Handle hsl colors - convert to rgba
             const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
             if (hslMatch) {
                 const [r, g, b] = hslToRgb(parseInt(hslMatch[1]), parseInt(hslMatch[2]), parseInt(hslMatch[3]));
                 return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
-            
+
             // Handle rgb colors
             const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
             if (rgbMatch) {
                 return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`;
             }
-            
+
             // Handle rgba - replace the alpha
             const rgbaMatch = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
             if (rgbaMatch) {
                 return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${alpha})`;
             }
-            
+
             // Handle hsla - convert to rgba
             const hslaMatch = color.match(/hsla\((\d+),\s*(\d+)%,\s*(\d+)%,\s*[\d.]+\)/);
             if (hslaMatch) {
                 const [r, g, b] = hslToRgb(parseInt(hslaMatch[1]), parseInt(hslaMatch[2]), parseInt(hslaMatch[3]));
                 return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
-            
+
             return color;
         }
 
@@ -2052,7 +2052,7 @@
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             const cx = size / 2;
-            const cy = size / 2;
+            const cy = size / 2 + 0.5;
             ctx.beginPath();
             ctx.moveTo(cx - 0.75, cy);
             ctx.lineTo(cx + 0.75, cy);
@@ -2082,7 +2082,7 @@
         let highlightActive = false;
         function highlightChartDataset(jobColor, agent = null) {
             if (!chart) return;
-            
+
             // Store original values on first highlight
             if (!highlightActive) {
                 chart.data.datasets.forEach(ds => {
@@ -2096,20 +2096,20 @@
                 });
                 highlightActive = true;
             }
-            
+
             chart.data.datasets.forEach((ds, dsIdx) => {
                 // Match by the original border color (unique per job)
                 const isJobMatch = ds._originalBorderColor === jobColor;
                 const hasPointsArray = Array.isArray(ds._originalPointRadius) && ds._originalPointRadius.some(r => r > 0);
                 const hasPointsSingle = !Array.isArray(ds._originalPointRadius) && ds._originalPointRadius > 0;
                 const hasPoints = hasPointsArray || hasPointsSingle;
-                
+
                 // Helper to mute a color
                 const muteColor = (c) => {
                     if (typeof c === 'string') return colorToRgba(c, 0.25);
                     return c;
                 };
-                
+
                 // Helper to mute point colors array or single value
                 const mutePointColors = (colors) => {
                     if (Array.isArray(colors)) {
@@ -2119,7 +2119,7 @@
                     }
                     return colors;
                 };
-                
+
                 // Helper to mute point styles (for timeout markers)
                 const mutePointStyles = (styles, origColors) => {
                     if (!Array.isArray(styles)) return styles;
@@ -2131,7 +2131,7 @@
                         return style;
                     });
                 };
-                
+
                 if (isJobMatch && !agent) {
                     // Highlight entire job: keep original formatting
                     ds.borderColor = ds._originalBorderColor;
@@ -2147,7 +2147,7 @@
                     ds.borderColor = muteColor(ds._originalBorderColor);
                     ds.backgroundColor = muteColor(ds._originalBackgroundColor);
                     ds.borderWidth = ds._originalBorderWidth;
-                    
+
                     if (hasPoints) {
                         // Reduce non-matching agent points to half size (Chart.js caches point colors)
                         if (Array.isArray(ds._originalPointRadius)) {
@@ -2165,8 +2165,8 @@
                                 const meta = chartMetadata[`${dsIdx}-${ptIdx}`];
                                 if (meta && meta.agent === agent) return style;
                                 if (style instanceof HTMLCanvasElement) {
-                                    const origColor = Array.isArray(ds._originalPointBackgroundColor) 
-                                        ? ds._originalPointBackgroundColor[ptIdx] 
+                                    const origColor = Array.isArray(ds._originalPointBackgroundColor)
+                                        ? ds._originalPointBackgroundColor[ptIdx]
                                         : ds._originalPointBackgroundColor;
                                     return getSmallTimedOutMarker(origColor);
                                 }
@@ -2193,8 +2193,8 @@
                     if (Array.isArray(ds._originalPointStyle)) {
                         ds.pointStyle = ds._originalPointStyle.map((style, ptIdx) => {
                             if (style instanceof HTMLCanvasElement) {
-                                const origColor = Array.isArray(ds._originalPointBackgroundColor) 
-                                    ? ds._originalPointBackgroundColor[ptIdx] 
+                                const origColor = Array.isArray(ds._originalPointBackgroundColor)
+                                    ? ds._originalPointBackgroundColor[ptIdx]
                                     : ds._originalPointBackgroundColor;
                                 return getSmallTimedOutMarker(origColor);
                             }
@@ -2208,7 +2208,7 @@
 
         function clearChartHighlight() {
             if (!chart || !highlightActive) return;
-            
+
             chart.data.datasets.forEach(ds => {
                 ds.borderColor = ds._originalBorderColor;
                 ds.backgroundColor = ds._originalBackgroundColor;
@@ -2338,7 +2338,7 @@
 
                 // Duration stats from passed runs only
                 const passedRuns = filtered.filter(r => (r.state || 'passed') === 'passed');
-                
+
                 let median = null, mean = null, min = null, max = null, std = null, trend = null;
                 if (passedRuns.length > 0) {
                     const durations = passedRuns.map(r => r.duration);
@@ -2752,13 +2752,13 @@
 
             // Apply URL params (selection and time range) or localStorage or default
             const hasURLSelection = applyURLParams();
-            
+
             // Always restore stats panel height from localStorage (independent of URL params)
             const storedConfig = loadFromLocalStorage();
             if (storedConfig && storedConfig.statsHeight && storedConfig.statsHeight >= 50) {
                 document.getElementById('stats-wrapper').style.height = storedConfig.statsHeight + 'px';
             }
-            
+
             if (!hasURLSelection) {
                 // Try localStorage for other settings
                 if (storedConfig) {
