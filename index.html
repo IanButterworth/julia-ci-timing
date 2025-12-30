@@ -69,7 +69,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; }
+        html, body { height: 100%; overflow: hidden; overflow-x: hidden; max-width: 100vw; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
             background: var(--color-canvas-default);
@@ -200,6 +200,8 @@
             display: flex;
             flex: 1;
             min-height: 0;
+            overflow: hidden;
+            max-width: 100%;
         }
 
         /* Sidebar with matrix */
@@ -357,23 +359,30 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
             background: var(--color-canvas-default);
         }
         .chart-container {
             flex: 1;
             padding: 12px;
             min-height: 0;
+            min-width: 0;
             position: relative;
+            overflow: hidden;
         }
         .chart-wrapper {
             position: absolute;
             top: 12px;
             left: 12px;
-            right: 12px;
+            right: 16px;
             bottom: 12px;
+            overflow: hidden;
+            width: calc(100% - 28px);
         }
         .chart-wrapper canvas {
             touch-action: none; /* Let Chart.js handle all touch events */
+            max-width: 100% !important;
         }
 
         /* Stats bar */
@@ -607,6 +616,7 @@
 
             .content {
                 min-height: 400px;
+                width: 100%;
             }
 
             .chart-container {
@@ -614,12 +624,15 @@
                 padding: 8px;
                 display: flex;
                 flex-direction: column;
+                width: 100%;
             }
             .chart-wrapper {
                 position: relative;
                 flex: 1;
                 min-height: 0;
                 padding-bottom: 8px;
+                width: calc(100% - 16px);
+                margin-right: 16px;
             }
 
             .stats-wrapper {
@@ -734,13 +747,17 @@
 
             .content {
                 min-height: 350px;
+                width: 100%;
             }
             .chart-container {
                 min-height: 250px;
                 padding: 4px;
+                width: 100%;
             }
             .chart-wrapper {
                 padding-bottom: 12px; /* Extra space for rotated x-axis labels */
+                width: calc(100% - 16px);
+                margin-right: 16px;
             }
 
             .stats-wrapper {
