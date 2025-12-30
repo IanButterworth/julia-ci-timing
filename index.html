@@ -2927,28 +2927,8 @@
                     }
                 }
 
-                // Compute aggregate stats on normalized values (percentages)
-                let aggMedianPct = null, aggMeanPct = null, aggMinPct = null, aggMaxPct = null, aggStdPct = null, aggTrend = null;
-                if (normalizedRuns.length > 0) {
-                    const pcts = normalizedRuns.map(r => r.duration);
-                    const sorted = [...pcts].sort((a, b) => a - b);
-                    aggMedianPct = sorted[Math.floor(sorted.length / 2)];
-                    aggMeanPct = pcts.reduce((a, b) => a + b, 0) / pcts.length;
-                    aggMinPct = Math.min(...pcts);
-                    aggMaxPct = Math.max(...pcts);
-                    const variance = pcts.reduce((sum, d) => sum + (d - aggMeanPct) ** 2, 0) / pcts.length;
-                    aggStdPct = Math.sqrt(variance);
-                    // Trend on normalized data shows relative changes across all jobs
-                    aggTrend = computeTrend(normalizedRuns);
-                }
-
-                // Format percentage stats
-                const formatPct = (pct) => pct != null ? `${pct.toFixed(1)}%` : '<span style="color: var(--color-fg-muted)">—</span>';
-                const formatPctWithColor = (pct) => {
-                    if (pct == null) return '<span style="color: var(--color-fg-muted)">—</span>';
-                    const color = pct > 105 ? 'var(--color-danger-fg)' : pct < 95 ? 'var(--color-success-fg)' : 'inherit';
-                    return `<span style="color: ${color}">${pct.toFixed(1)}%</span>`;
-                };
+                // Compute aggregate trend on normalized values
+                const aggTrend = normalizedRuns.length > 0 ? computeTrend(normalizedRuns) : null;
 
                 let aggPassRateHtml = '<span style="color: var(--color-fg-muted)">—</span>';
                 if (allTotal > 0) {
@@ -2968,19 +2948,16 @@
                 const aggRow = document.createElement('tr');
                 aggRow.style.cssText = 'font-weight: 600; border-bottom: 2px solid var(--color-border-default);';
                 const aggTrendResult = formatTrend(aggTrend, null, true);
-                const aggTrendCell = aggTrendResult.trendData
-                    ? `<td class="trend-cell" data-trend='${aggTrendResult.trendData}'>${aggTrendResult.html}</td>`
-                    : `<td>${aggTrendResult.html}</td>`;
                 aggRow.innerHTML = `
                     <td>All (${jobStats.length} jobs)</td>
                     <td></td>
                     <td>${aggPassRateHtml}</td>
-                    ${aggTrendCell}
-                    <td class="duration" title="Normalized: 100% = each job's median">${formatPctWithColor(aggMedianPct)}</td>
-                    <td class="duration" title="Normalized: 100% = each job's median">${formatPctWithColor(aggMeanPct)}</td>
-                    <td class="duration" title="Normalized: 100% = each job's median">${formatPct(aggMinPct)}</td>
-                    <td class="duration" title="Normalized: 100% = each job's median">${formatPct(aggMaxPct)}</td>
-                    <td class="duration" title="Normalized standard deviation">${aggStdPct != null ? '±' + aggStdPct.toFixed(1) + '%' : '<span style="color: var(--color-fg-muted)">—</span>'}</td>
+                    <td>${aggTrendResult.html}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                     <td>${allN}</td>
                 `;
                 tbody.appendChild(aggRow);
