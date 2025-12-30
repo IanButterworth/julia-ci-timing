@@ -231,12 +231,16 @@ function get_known_build_numbers(existing_data)
     jobs = get(existing_data, :jobs, Dict())
     for (name, job) in pairs(jobs)
         recent = get(job, :recent, [])
-        # Coverage jobs are only in the scheduled pipeline
-        is_scheduled = occursin("coverage", lowercase(String(name)))
-        target = is_scheduled ? scheduled_builds : master_builds
         for record in recent
             build = get(record, :build, nothing)
-            build !== nothing && push!(target, build)
+            build === nothing && continue
+            # Use the pipeline field to determine which set to add to
+            pipeline = get(record, :pipeline, "julia-master")
+            if pipeline == "julia-master-scheduled"
+                push!(scheduled_builds, build)
+            else
+                push!(master_builds, build)
+            end
         end
     end
     return (master=master_builds, scheduled=scheduled_builds)
