@@ -901,12 +901,12 @@
                                 <th scope="col" class="sortable" data-sort="job" onclick="handleStatsTableSort('job')">Job <span class="sort-indicator">▲</span></th>
                                 <th scope="col">Hosts</th>
                                 <th scope="col" class="sortable" data-sort="passRate" title="Pass rate in last 14 days" onclick="handleStatsTableSort('passRate')">Pass Rate <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="trend" title="Trend over selected time range" onclick="handleStatsTableSort('trend')">Trend <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="median" onclick="handleStatsTableSort('median')">Median <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="mean" onclick="handleStatsTableSort('mean')">Mean <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="min" onclick="handleStatsTableSort('min')">Min <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="max" onclick="handleStatsTableSort('max')">Max <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="std" onclick="handleStatsTableSort('std')">σ <span class="sort-indicator">▲</span></th>
-                                <th scope="col" class="sortable" data-sort="trend" title="Trend over selected time range" onclick="handleStatsTableSort('trend')">Trend <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="n" onclick="handleStatsTableSort('n')">n <span class="sort-indicator">▲</span></th>
                             </tr>
                         </thead>
@@ -2949,12 +2949,12 @@
                     <td>All (${jobStats.length} jobs)</td>
                     <td></td>
                     <td>${aggPassRateHtml}</td>
+                    ${aggTrendCell}
                     <td class="duration">${formatDuration(aggMedian)}</td>
                     <td class="duration">${formatDuration(aggMean)}</td>
                     <td class="duration">${formatDuration(aggMin)}</td>
                     <td class="duration">${formatDuration(aggMax)}</td>
                     <td class="duration">${aggStd != null ? '±' + formatDuration(aggStd) : formatDuration(null)}</td>
-                    ${aggTrendCell}
                     <td>${allN}</td>
                 `;
                 tbody.appendChild(aggRow);
@@ -3011,12 +3011,12 @@
                     <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
                     <td>${hostsHtml}</td>
                     <td>${passRateHtml}</td>
+                    ${trendCell}
                     <td class="duration">${formatDuration(median)}</td>
                     <td class="duration">${formatDuration(mean)}</td>
                     <td class="duration">${formatDuration(min)}</td>
                     <td class="duration">${formatDuration(max)}</td>
                     <td class="duration">${std != null ? '±' + formatDuration(std) : formatDuration(null)}</td>
-                    ${trendCell}
                     <td>${n}</td>
                 `;
                 tbody.appendChild(row);
@@ -3093,12 +3093,12 @@
                             <td><span class="color-dot" style="background: ${hostColor}"></span> ${agent}</td>
                             <td></td>
                             <td>${hostPrHtml}</td>
+                            ${hostTrendCell}
                             <td class="duration">${formatDuration(hostMedian)}</td>
                             <td class="duration">${formatDuration(hostMean)}</td>
                             <td class="duration">${formatDuration(hostMin)}</td>
                             <td class="duration">${formatDuration(hostMax)}</td>
                             <td class="duration">±${formatDuration(hostStd)}</td>
-                            ${hostTrendCell}
                             <td>${hostN}</td>
                         `;
                         tbody.appendChild(hostRow);
