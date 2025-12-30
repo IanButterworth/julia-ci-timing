@@ -2906,6 +2906,10 @@
             calculateAllPassRates();
 
             // Build matrix table
+            renderMatrixTable();
+        }
+
+        function renderMatrixTable() {
             const matrixContainer = document.getElementById('job-matrix');
             let html = '<table class="matrix-table">';
 
@@ -3296,6 +3300,10 @@
                     allJobs.forEach((name, i) => {
                         jobColors[name] = colors[i];
                     });
+                    
+                    // Recalculate pass rates with complete data and re-render matrix
+                    calculateAllPassRates();
+                    renderMatrixTable();
                     
                     // Re-apply URL params with complete data to get full selection
                     // (partial data may have missed some jobs in matrix cells)
