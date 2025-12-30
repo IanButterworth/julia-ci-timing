@@ -865,13 +865,13 @@
     <main class="main">
         <aside class="sidebar" aria-label="Job selection">
             <div class="job-matrix-wrapper">
-                <div class="section-header" onclick="toggleSection(this)">Platform Matrix</div>
+                <div class="section-header" id="section-matrix" onclick="toggleSection(this)">Platform Matrix</div>
                 <div class="collapsible-content">
                     <div class="job-matrix" id="job-matrix" role="grid" aria-label="Platform and test type matrix"><div class="loading">Loading...</div></div>
                 </div>
             </div>
             <div class="job-list-section">
-                <div class="section-header" onclick="toggleSection(this)">Jobs (<span id="job-count-mobile">0/0</span>)</div>
+                <div class="section-header" id="section-jobs" onclick="toggleSection(this)">Jobs (<span id="job-count-mobile">0/0</span>)</div>
                 <div class="collapsible-content">
                     <div class="job-list-header">Jobs (<span id="job-count">0/0</span>)</div>
                     <div class="job-list" id="job-list" role="listbox" aria-label="Available jobs"><div class="loading">Loading jobs...</div></div>
@@ -3086,12 +3086,35 @@
             if (mobileCount) mobileCount.textContent = countText;
         }
 
-        // Toggle collapsible section (mobile)
+        // Toggle collapsible section (mobile) with localStorage persistence
         function toggleSection(header) {
             header.classList.toggle('collapsed');
             const content = header.nextElementSibling;
             if (content) content.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            if (header.id) {
+                const collapsed = header.classList.contains('collapsed');
+                try {
+                    localStorage.setItem(`section-${header.id}`, collapsed ? '1' : '0');
+                } catch (e) { /* ignore */ }
+            }
         }
+
+        // Restore collapsed section states from localStorage
+        function restoreSectionStates() {
+            document.querySelectorAll('.section-header[id]').forEach(header => {
+                try {
+                    const saved = localStorage.getItem(`section-${header.id}`);
+                    if (saved === '1') {
+                        header.classList.add('collapsed');
+                        const content = header.nextElementSibling;
+                        if (content) content.classList.add('collapsed');
+                    }
+                } catch (e) { /* ignore */ }
+            });
+        }
+        restoreSectionStates();
 
         function toggleMatrixCell(platform, type) {
             toggleJobsSelection(jobMatrix[platform][type]);
@@ -3263,12 +3286,47 @@
                     populateJobSelector();
                     document.getElementById('chart-loading').style.display = 'none';
                 } else {
-                    // Update with complete data - need to rebuild everything
-                    // since we may have been missing jobs in partial parse
-                    const currentSelection = new Set(selectedJobs);
-                    populateJobSelector();
-                    // Restore selection (populateJobSelector may have changed it)
-                    selectedJobs = currentSelection;
+                    // Update with complete data - rebuild matrix with all jobs
+                    buildJobMatrix();
+                    buildJobIndex();
+                    
+                    // Re-apply URL params with complete data to get full selection
+                    // (partial data may have missed some jobs in matrix cells)
+                    selectedJobs.clear();
+                    const hasURLSelection = applyURLParams();
+                    
+                    if (!hasURLSelection) {
+                        // Try localStorage
+                        const storedConfig = loadFromLocalStorage();
+                        if (storedConfig?.selection) {
+                            const sel = decodeSelection(storedConfig.selection);
+                            if (sel) {
+                                for (const { platform, type } of sel.matrix) {
+                                    const jobs = jobMatrix[platform]?.[type] || [];
+                                    for (const { name } of jobs) selectedJobs.add(name);
+                                }
+                                for (const group of sel.special) {
+                                    const jobs = specialJobGroups[group] || [];
+                                    for (const { name } of jobs) selectedJobs.add(name);
+                                }
+                                for (const idx of sel.indices) {
+                                    if (jobNameList[idx]) selectedJobs.add(jobNameList[idx]);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If still nothing selected, select all matrix jobs
+                    if (selectedJobs.size === 0) {
+                        for (const platform of platformOrder) {
+                            for (const type of typeOrder) {
+                                for (const { name } of (jobMatrix[platform]?.[type] || [])) {
+                                    selectedJobs.add(name);
+                                }
+                            }
+                        }
+                    }
+                    
                     refreshAllUI();
                 }
             } catch (err) {
