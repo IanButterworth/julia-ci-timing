@@ -119,6 +119,12 @@
             line-height: 20px;
         }
         .btn:hover { background: var(--color-btn-hover-bg); }
+        .btn-primary {
+            background: var(--color-accent-emphasis);
+            border-color: var(--color-accent-emphasis);
+            color: #fff;
+        }
+        .btn-primary:hover { background: #1f6feb; }
         .btn-link { text-decoration: none; }
         .time-select {
             padding: 4px 8px;
@@ -839,7 +845,7 @@
             <option value="365">Last 365 days</option>
             <option value="0">All time</option>
         </select>
-        <button class="btn" id="btn-reset-zoom" onclick="resetZoom()" aria-label="Reset zoom" style="display: none;">Reset</button>
+        <button class="btn btn-primary" id="btn-reset-zoom" onclick="resetZoom()" aria-label="Reset chart" style="display: none;">Reset chart</button>
         <select class="time-select" id="line-type" onchange="setLineType(this.value)" aria-label="Line type">
             <option value="raw">Raw data</option>
             <option value="7" selected>7-day avg</option>
