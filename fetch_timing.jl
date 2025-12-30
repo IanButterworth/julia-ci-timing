@@ -38,8 +38,9 @@ function api_get(endpoint; token=get_token(), params=Dict())
     return JSON3.read(resp.body)
 end
 
-function fetch_builds(; branch="master", per_page=100, max_pages=30, known_builds=Set{Int}())
+function fetch_builds(; branch="master", per_page=100, max_pages=30, fully_captured_below=0)
     builds = []
+    
     for page in 1:max_pages
         params = Dict(
             "branch" => branch,
@@ -50,19 +51,21 @@ function fetch_builds(; branch="master", per_page=100, max_pages=30, known_build
         data === nothing && break
         isempty(data) && break
 
-        # Check if we've hit builds we already have (early stop)
         new_in_page = 0
+        oldest_in_page = typemax(Int)
         for build in data
-            if build.number ∉ known_builds
+            oldest_in_page = min(oldest_in_page, build.number)
+            # Only skip builds that are definitely fully captured (below threshold)
+            if build.number >= fully_captured_below
                 push!(builds, build)
                 new_in_page += 1
             end
         end
-        @info "Fetched page $page (julia-master)" new_builds=new_in_page known=length(data)-new_in_page
+        @info "Fetched page $page (julia-master)" new_or_updated=new_in_page skipped=length(data)-new_in_page oldest=oldest_in_page threshold=fully_captured_below
 
-        # If all builds in this page were known, we can stop
-        if new_in_page == 0
-            @info "All builds on page already known, stopping early"
+        # If we've gone past the threshold and all builds are known, we can stop
+        if oldest_in_page < fully_captured_below && new_in_page == 0
+            @info "Reached fully captured region, stopping early"
             break
         end
     end
@@ -71,7 +74,7 @@ end
 
 const SCHEDULED_PIPELINE = "julia-master-scheduled"
 
-function fetch_scheduled_builds(; branch="master", per_page=100, max_pages=10, known_builds=Set{Int}())
+function fetch_scheduled_builds(; branch="master", per_page=100, max_pages=10, fully_captured_below=0)
     builds = []
     for page in 1:max_pages
         params = Dict(
@@ -83,19 +86,21 @@ function fetch_scheduled_builds(; branch="master", per_page=100, max_pages=10, k
         data === nothing && break
         isempty(data) && break
 
-        # Check if we've hit builds we already have (early stop)
         new_in_page = 0
+        oldest_in_page = typemax(Int)
         for build in data
-            if build.number ∉ known_builds
+            oldest_in_page = min(oldest_in_page, build.number)
+            # Only skip builds that are definitely fully captured (below threshold)
+            if build.number >= fully_captured_below
                 push!(builds, build)
                 new_in_page += 1
             end
         end
-        @info "Fetched page $page (julia-master-scheduled)" new_builds=new_in_page known=length(data)-new_in_page
+        @info "Fetched page $page (julia-master-scheduled)" new_or_updated=new_in_page skipped=length(data)-new_in_page oldest=oldest_in_page threshold=fully_captured_below
 
-        # If all builds in this page were known, we can stop
-        if new_in_page == 0
-            @info "All builds on page already known, stopping early"
+        # If we've gone past the threshold and all builds are known, we can stop
+        if oldest_in_page < fully_captured_below && new_in_page == 0
+            @info "Reached fully captured region, stopping early"
             break
         end
     end
@@ -226,6 +231,7 @@ end
 
 function get_known_build_numbers(existing_data)
     # Returns (master_builds, scheduled_builds) since the pipelines have independent numbering
+    # These are builds we've seen before - but we should refetch builds that may have more jobs now
     master_builds = Set{Int}()
     scheduled_builds = Set{Int}()
     jobs = get(existing_data, :jobs, Dict())
@@ -244,6 +250,36 @@ function get_known_build_numbers(existing_data)
         end
     end
     return (master=master_builds, scheduled=scheduled_builds)
+end
+
+# Get the minimum build number we should consider "fully captured"
+# This is based on the oldest build in the most recent N entries of key jobs
+function get_fully_captured_threshold(existing_data; key_jobs=[":linux: test x86_64-linux-gnu", ":linux: build x86_64-linux-gnu"], lookback=50)
+    master_min = typemax(Int)
+    scheduled_min = typemax(Int)
+    jobs = get(existing_data, :jobs, Dict())
+    
+    for job_name in key_jobs
+        job = get(jobs, Symbol(job_name), nothing)
+        job === nothing && continue
+        recent = get(job, :recent, [])
+        isempty(recent) && continue
+        
+        # Look at the last N entries and find the minimum build number
+        for r in recent[1:min(lookback, length(recent))]
+            build = get(r, :build, nothing)
+            build === nothing && continue
+            pipeline = get(r, :pipeline, "julia-master")
+            if pipeline == "julia-master-scheduled"
+                scheduled_min = min(scheduled_min, build)
+            else
+                master_min = min(master_min, build)
+            end
+        end
+    end
+    
+    return (master=master_min == typemax(Int) ? 0 : master_min, 
+            scheduled=scheduled_min == typemax(Int) ? 0 : scheduled_min)
 end
 
 function generate_json_output(job_timings; output_dir="data")
@@ -359,17 +395,19 @@ function main()
     # Load existing data first to enable early stopping
     @info "Loading existing data..."
     existing = load_existing_data("data")
-    known = get_known_build_numbers(existing)
-    @info "Known builds from existing data" master=length(known.master) scheduled=length(known.scheduled)
+    
+    # Get threshold: builds below this number are fully captured (have all expected jobs)
+    threshold = get_fully_captured_threshold(existing)
+    @info "Fully captured threshold" master=threshold.master scheduled=threshold.scheduled
 
     @info "Fetching builds from Buildkite..."
-    builds = fetch_builds(; max_pages=30, known_builds=known.master)
-    @info "Fetched new julia-master builds" count=length(builds)
+    builds = fetch_builds(; max_pages=30, fully_captured_below=threshold.master)
+    @info "Fetched julia-master builds" count=length(builds)
 
-    scheduled_builds = fetch_scheduled_builds(; max_pages=10, known_builds=known.scheduled)
-    @info "Fetched new julia-master-scheduled builds" count=length(scheduled_builds)
+    scheduled_builds = fetch_scheduled_builds(; max_pages=10, fully_captured_below=threshold.scheduled)
+    @info "Fetched julia-master-scheduled builds" count=length(scheduled_builds)
 
-    if isempty(builds) && isempty(scheduled_builds) && isempty(known.master) && isempty(known.scheduled)
+    if isempty(builds) && isempty(scheduled_builds) && threshold.master == 0 && threshold.scheduled == 0
         @error "No builds fetched and no existing data - check your token and permissions"
         return 1
     end
