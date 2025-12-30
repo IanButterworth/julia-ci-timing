@@ -216,14 +216,16 @@
         .job-matrix {
             padding: 8px;
             flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            width: 100%;
         }
         .matrix-table {
-            width: 100%;
             border-collapse: collapse;
             font-size: 11px;
         }
         .matrix-table th, .matrix-table td {
-            padding: 4px 6px;
+            padding: 4px 12px;
             text-align: center;
             border: 1px solid var(--color-border-muted);
         }
@@ -239,7 +241,7 @@
             background: var(--color-neutral-muted);
         }
         .matrix-table th.row-header {
-            text-align: left;
+            text-align: right;
             white-space: nowrap;
         }
         .matrix-cell {
@@ -264,8 +266,9 @@
         .matrix-cell.partial-selection {
             background: rgba(31, 136, 61, 0.25);
         }
-        .matrix-corner {
+        .matrix-table .matrix-corner {
             cursor: default;
+            text-align: right;
         }
 
         /* Collapsible section header */
@@ -1725,30 +1728,29 @@
             if (lower.includes('upload docs')) return { group: 'docs', type: 'upload' };
             if (lower.includes('doctest') || lower.includes('pdf_docs')) return { group: 'docs', type: 'test' };
 
+            // Upload jobs go to special group (before platform checks)
+            if (lower.includes('upload')) return { group: 'upload', type: 'upload' };
+
             // Platform-based grouping
             if (lower.includes(':linux:') || lower.includes('linux')) {
                 if (lower.includes('coverage')) return { group: 'linux', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'linux', type: 'build' };
                 if (lower.includes('test')) return { group: 'linux', type: 'test' };
-                if (lower.includes('upload')) return { group: 'linux', type: 'upload' };
             }
             if (lower.includes(':macos:') || lower.includes('macos') || lower.includes('darwin')) {
                 if (lower.includes('coverage')) return { group: 'macos', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'macos', type: 'build' };
                 if (lower.includes('test')) return { group: 'macos', type: 'test' };
-                if (lower.includes('upload')) return { group: 'macos', type: 'upload' };
             }
             if (lower.includes(':windows:') || lower.includes('windows') || lower.includes('mingw')) {
                 if (lower.includes('coverage')) return { group: 'windows', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'windows', type: 'build' };
                 if (lower.includes('test')) return { group: 'windows', type: 'test' };
-                if (lower.includes('upload')) return { group: 'windows', type: 'upload' };
             }
             if (lower.includes(':freebsd:') || lower.includes('freebsd')) {
                 if (lower.includes('coverage')) return { group: 'freebsd', type: 'coverage' };
                 if (lower.includes('build')) return { group: 'freebsd', type: 'build' };
                 if (lower.includes('test')) return { group: 'freebsd', type: 'test' };
-                if (lower.includes('upload')) return { group: 'freebsd', type: 'upload' };
             }
 
             // Special test types
@@ -2107,19 +2109,19 @@
                                 callback: function(value, index, ticks) {
                                     const date = new Date(value);
                                     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                                    
+
                                     // Determine time range to decide format
-                                    const rangeMs = ticks.length >= 2 
-                                        ? ticks[ticks.length - 1].value - ticks[0].value 
+                                    const rangeMs = ticks.length >= 2
+                                        ? ticks[ticks.length - 1].value - ticks[0].value
                                         : Infinity;
                                     const MINUTE = 60 * 1000;
                                     const HOUR = 60 * MINUTE;
                                     const DAY = 24 * HOUR;
-                                    
+
                                     const hours = date.getHours().toString().padStart(2, '0');
                                     const mins = date.getMinutes().toString().padStart(2, '0');
                                     const secs = date.getSeconds().toString().padStart(2, '0');
-                                    
+
                                     // For ranges under 10 minutes, show seconds
                                     if (rangeMs < 10 * MINUTE) {
                                         const timeStr = `${hours}:${mins}:${secs}`;
@@ -2132,7 +2134,7 @@
                                         }
                                         return timeStr;
                                     }
-                                    
+
                                     // For ranges under 3 days, show time (hours:minutes)
                                     if (rangeMs < 3 * DAY) {
                                         const timeStr = `${hours}:${mins}`;
@@ -2146,7 +2148,7 @@
                                         }
                                         return timeStr;
                                     }
-                                    
+
                                     // Default: day-level labels
                                     const label = `${months[date.getMonth()]} ${date.getDate()}`;
                                     // Show year on first tick and when year changes
@@ -2167,7 +2169,7 @@
                                 const MINUTE = 60 * SECOND;
                                 const HOUR = 60 * MINUTE;
                                 const DAY = 24 * HOUR;
-                                
+
                                 // Nice intervals from seconds to months
                                 const niceSteps = [
                                     5*SECOND, 10*SECOND, 15*SECOND, 30*SECOND,
@@ -2181,7 +2183,7 @@
                                 // Round min to appropriate boundary
                                 const minDate = new Date(axis.min);
                                 let minTick;
-                                
+
                                 if (step < MINUTE) {
                                     // Align to second boundary
                                     minDate.setMilliseconds(0);
@@ -2205,7 +2207,7 @@
                                     const dayOfWeek = minDate.getDay();
                                     minTick -= dayOfWeek * DAY;
                                 }
-                                
+
                                 // Move to first tick after axis.min
                                 while (minTick < axis.min) minTick += step;
 
@@ -2917,7 +2919,7 @@
 
         // Matrix organization
         const platformOrder = ['linux', 'macos', 'windows', 'freebsd'];
-        const typeOrder = ['build', 'test', 'upload', 'coverage'];
+        const typeOrder = ['build', 'test', 'coverage'];
         const platformLabels = {
             'linux': `<img src="${BUILDKITE_EMOJI_BASE}/linux.png" class="bk-emoji"> Linux`,
             'macos': `<img src="${BUILDKITE_EMOJI_BASE}/mac.png" class="bk-emoji"> macOS`,
@@ -2927,11 +2929,11 @@
         const typeLabels = {
             'build': 'Build',
             'test': 'Test',
-            'upload': 'Upload',
             'coverage': 'Coverage'
         };
-        const specialGroups = ['juliasyntax', 'docs', 'special', 'pipeline', 'upload-results', 'other'];
+        const specialGroups = ['upload', 'juliasyntax', 'docs', 'special', 'pipeline', 'upload-results', 'other'];
         const specialLabels = {
+            'upload': '📤 Upload',
             'juliasyntax': '📝 JuliaSyntax',
             'docs': '📚 Docs',
             'special': '🔬 Special',
@@ -2993,7 +2995,7 @@
             let html = '<table class="matrix-table">';
 
             // Header row
-            html += '<tr><th class="matrix-corner clickable" onclick="selectAllMatrix()" title="Select all matrix jobs"></th>';
+            html += '<tr><th class="matrix-corner clickable" onclick="selectAllMatrix()" title="Select all matrix jobs">All</th>';
             for (const type of typeOrder) {
                 html += `<th class="clickable" onclick="selectByType('${type}')">${typeLabels[type]}</th>`;
             }
@@ -3023,8 +3025,8 @@
             }
 
             // Special groups row
-            html += '<tr><th class="row-header clickable" colspan="5" style="text-align:center; padding-top:8px;" onclick="selectAllSpecial()" title="Toggle all special jobs">Special</th></tr>';
-            html += '<tr><td colspan="5" style="padding:0;">';
+            html += '<tr><th class="row-header clickable" colspan="4" style="text-align:center; padding-top:8px;" onclick="selectAllSpecial()" title="Toggle all special jobs">Special</th></tr>';
+            html += '<tr><td colspan="4" style="padding:0;">';
             html += '<div style="display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:center;">';
             for (const group of specialGroups) {
                 const jobs = specialJobGroups[group];
@@ -3174,7 +3176,7 @@
             header.classList.toggle('collapsed');
             const content = header.nextElementSibling;
             if (content) content.classList.toggle('collapsed');
-            
+
             // Save state to localStorage
             if (header.id) {
                 const collapsed = header.classList.contains('collapsed');
@@ -3372,23 +3374,23 @@
                     // Update with complete data - rebuild matrix with all jobs
                     buildJobMatrix();
                     buildJobIndex();
-                    
+
                     // Reassign colors for any new jobs from complete data
                     const allJobs = Object.keys(data.jobs);
                     const colors = generateColors(allJobs.length);
                     allJobs.forEach((name, i) => {
                         jobColors[name] = colors[i];
                     });
-                    
+
                     // Recalculate pass rates with complete data and re-render matrix
                     calculateAllPassRates();
                     renderMatrixTable();
-                    
+
                     // Re-apply URL params with complete data to get full selection
                     // (partial data may have missed some jobs in matrix cells)
                     selectedJobs.clear();
                     const hasURLSelection = applyURLParams();
-                    
+
                     if (!hasURLSelection) {
                         // Try localStorage
                         const storedConfig = loadFromLocalStorage();
@@ -3409,7 +3411,7 @@
                             }
                         }
                     }
-                    
+
                     // If still nothing selected, select all matrix jobs
                     if (selectedJobs.size === 0) {
                         for (const platform of platformOrder) {
@@ -3420,7 +3422,7 @@
                             }
                         }
                     }
-                    
+
                     refreshAllUI();
                 }
             } catch (err) {
@@ -3488,8 +3490,8 @@
             }
 
             // Special groups placeholder
-            html += '<tr><th class="row-header" colspan="5" style="text-align:center; padding-top:8px;">Special</th></tr>';
-            html += '<tr><td colspan="5" class="loading" style="font-size:11px;">Loading special jobs...</td></tr>';
+            html += '<tr><th class="row-header" colspan="4" style="text-align:center; padding-top:8px;">Special</th></tr>';
+            html += '<tr><td colspan="4" class="loading" style="font-size:11px;">Loading special jobs...</td></tr>';
 
             html += '</table>';
             matrixContainer.innerHTML = html;
