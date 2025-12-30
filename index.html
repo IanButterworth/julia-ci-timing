@@ -1288,7 +1288,7 @@
             return 0.5 * (1.0 + sign * y);
         }
 
-        function formatTrend(trend, lineColor = null) {
+        function formatTrend(trend, lineColor = null, percentageMode = false) {
             if (!trend || trend.n < 3) {
                 return { html: '<span style="color: var(--color-fg-muted)" title="Not enough data points">—</span>', trendData: null };
             }
@@ -1298,7 +1298,10 @@
 
             // Convert slope to human-readable format (per day)
             let slopeText;
-            if (absSlope < 1) {
+            if (percentageMode) {
+                // For percentage mode, slope is in %/day
+                slopeText = `${slope >= 0 ? '+' : ''}${slope.toFixed(2)}%/day`;
+            } else if (absSlope < 1) {
                 slopeText = `${(absSlope * 60).toFixed(1)}s/day`;
             } else if (absSlope < 60) {
                 slopeText = `${absSlope.toFixed(1)}s/day`;
@@ -1307,12 +1310,17 @@
             }
 
             // Format absolute delta
-            const absDelta = Math.abs(absoluteDelta);
             let deltaText;
-            if (absDelta < 60) {
-                deltaText = `${absoluteDelta >= 0 ? '+' : '-'}${absDelta.toFixed(1)}s`;
+            if (percentageMode) {
+                // For percentage mode, delta is in percentage points
+                deltaText = `${absoluteDelta >= 0 ? '+' : ''}${absoluteDelta.toFixed(1)}pp`;
             } else {
-                deltaText = `${absoluteDelta >= 0 ? '+' : '-'}${(absDelta / 60).toFixed(1)}m`;
+                const absDelta = Math.abs(absoluteDelta);
+                if (absDelta < 60) {
+                    deltaText = `${absoluteDelta >= 0 ? '+' : '-'}${absDelta.toFixed(1)}s`;
+                } else {
+                    deltaText = `${absoluteDelta >= 0 ? '+' : '-'}${(absDelta / 60).toFixed(1)}m`;
+                }
             }
 
             // Format percentage change
@@ -1335,7 +1343,9 @@
             // Confidence indicator
             const confidence = significant ? (pValue < 0.01 ? '★★' : '★') : '';
             const pText = pValue < 0.001 ? '<0.001' : pValue.toFixed(3);
-            const title = `${slope > 0 ? '+' : ''}${slopeText} (${pctText}, ${deltaText} over period)\np-value: ${pText}\nR²: ${(rSquared * 100).toFixed(1)}%\n${significant ? 'Statistically significant' : 'Not significant'}`;
+            const title = percentageMode
+                ? `${slopeText} (${pctText}, ${deltaText} over period)\np-value: ${pText}\nR²: ${(rSquared * 100).toFixed(1)}%\n${significant ? 'Statistically significant' : 'Not significant'}`
+                : `${slope > 0 ? '+' : ''}${slopeText} (${pctText}, ${deltaText} over period)\np-value: ${pText}\nR²: ${(rSquared * 100).toFixed(1)}%\n${significant ? 'Statistically significant' : 'Not significant'}`;
 
             const displayText = significant ? `${pctText}` : 'flat';
 
@@ -2885,8 +2895,7 @@
 
             // Add "All" aggregate row when multiple jobs selected
             if (jobStats.length > 1) {
-                // Aggregate all durations from all jobs
-                const allFilteredRuns = [];
+                // Aggregate pass rate counts
                 let allPassed = 0, allFailed = 0, allTimedOut = 0, allCanceled = 0, allTotal = 0;
                 let allN = 0;
 
@@ -2901,28 +2910,45 @@
                     allN += stat.n;
                 }
 
-                // Collect all visible runs with dates for aggregate stats and trend
-                for (const jobName of selectedJobs) {
-                    const job = data.jobs[jobName];
+                // Normalize each run's duration relative to its job's median
+                // This allows meaningful aggregation across jobs with different scales
+                const normalizedRuns = [];
+                for (const stat of jobStats) {
+                    if (!stat.median || stat.median <= 0) continue;
+                    const job = data.jobs[stat.jobName];
                     if (!job) continue;
                     const filtered = filterRunsByState(job.recent, rangeMin, rangeMax);
                     for (const r of filtered) {
-                        allFilteredRuns.push(r);
+                        // Normalize: 100% = job's median, so 110% means 10% slower than median
+                        normalizedRuns.push({
+                            date: r.date,
+                            duration: (r.duration / stat.median) * 100  // percentage of median
+                        });
                     }
                 }
 
-                const allDurations = allFilteredRuns.map(r => r.duration);
-                let aggMedian = null, aggMean = null, aggMin = null, aggMax = null, aggStd = null, aggTrend = null;
-                if (allDurations.length > 0) {
-                    const sorted = [...allDurations].sort((a, b) => a - b);
-                    aggMedian = sorted[Math.floor(sorted.length / 2)];
-                    aggMean = allDurations.reduce((a, b) => a + b, 0) / allDurations.length;
-                    aggMin = Math.min(...allDurations);
-                    aggMax = Math.max(...allDurations);
-                    const variance = allDurations.reduce((sum, d) => sum + (d - aggMean) ** 2, 0) / allDurations.length;
-                    aggStd = Math.sqrt(variance);
-                    aggTrend = computeTrend(allFilteredRuns);
+                // Compute aggregate stats on normalized values (percentages)
+                let aggMedianPct = null, aggMeanPct = null, aggMinPct = null, aggMaxPct = null, aggStdPct = null, aggTrend = null;
+                if (normalizedRuns.length > 0) {
+                    const pcts = normalizedRuns.map(r => r.duration);
+                    const sorted = [...pcts].sort((a, b) => a - b);
+                    aggMedianPct = sorted[Math.floor(sorted.length / 2)];
+                    aggMeanPct = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                    aggMinPct = Math.min(...pcts);
+                    aggMaxPct = Math.max(...pcts);
+                    const variance = pcts.reduce((sum, d) => sum + (d - aggMeanPct) ** 2, 0) / pcts.length;
+                    aggStdPct = Math.sqrt(variance);
+                    // Trend on normalized data shows relative changes across all jobs
+                    aggTrend = computeTrend(normalizedRuns);
                 }
+
+                // Format percentage stats
+                const formatPct = (pct) => pct != null ? `${pct.toFixed(1)}%` : '<span style="color: var(--color-fg-muted)">—</span>';
+                const formatPctWithColor = (pct) => {
+                    if (pct == null) return '<span style="color: var(--color-fg-muted)">—</span>';
+                    const color = pct > 105 ? 'var(--color-danger-fg)' : pct < 95 ? 'var(--color-success-fg)' : 'inherit';
+                    return `<span style="color: ${color}">${pct.toFixed(1)}%</span>`;
+                };
 
                 let aggPassRateHtml = '<span style="color: var(--color-fg-muted)">—</span>';
                 if (allTotal > 0) {
@@ -2941,7 +2967,7 @@
 
                 const aggRow = document.createElement('tr');
                 aggRow.style.cssText = 'font-weight: 600; border-bottom: 2px solid var(--color-border-default);';
-                const aggTrendResult = formatTrend(aggTrend);
+                const aggTrendResult = formatTrend(aggTrend, null, true);
                 const aggTrendCell = aggTrendResult.trendData
                     ? `<td class="trend-cell" data-trend='${aggTrendResult.trendData}'>${aggTrendResult.html}</td>`
                     : `<td>${aggTrendResult.html}</td>`;
@@ -2950,11 +2976,11 @@
                     <td></td>
                     <td>${aggPassRateHtml}</td>
                     ${aggTrendCell}
-                    <td class="duration">${formatDuration(aggMedian)}</td>
-                    <td class="duration">${formatDuration(aggMean)}</td>
-                    <td class="duration">${formatDuration(aggMin)}</td>
-                    <td class="duration">${formatDuration(aggMax)}</td>
-                    <td class="duration">${aggStd != null ? '±' + formatDuration(aggStd) : formatDuration(null)}</td>
+                    <td class="duration" title="Normalized: 100% = each job's median">${formatPctWithColor(aggMedianPct)}</td>
+                    <td class="duration" title="Normalized: 100% = each job's median">${formatPctWithColor(aggMeanPct)}</td>
+                    <td class="duration" title="Normalized: 100% = each job's median">${formatPct(aggMinPct)}</td>
+                    <td class="duration" title="Normalized: 100% = each job's median">${formatPct(aggMaxPct)}</td>
+                    <td class="duration" title="Normalized standard deviation">${aggStdPct != null ? '±' + aggStdPct.toFixed(1) + '%' : '<span style="color: var(--color-fg-muted)">—</span>'}</td>
                     <td>${allN}</td>
                 `;
                 tbody.appendChild(aggRow);
