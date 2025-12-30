@@ -609,11 +609,14 @@
             .chart-container {
                 min-height: 300px;
                 padding: 8px;
+                display: flex;
+                flex-direction: column;
             }
             .chart-wrapper {
                 position: relative;
-                top: 0; left: 0; right: 0; bottom: 0;
-                height: 280px;
+                flex: 1;
+                min-height: 0;
+                padding-bottom: 8px;
             }
 
             .stats-wrapper {
@@ -733,7 +736,7 @@
                 padding: 4px;
             }
             .chart-wrapper {
-                height: 240px;
+                padding-bottom: 12px; /* Extra space for rotated x-axis labels */
             }
 
             .stats-wrapper {
