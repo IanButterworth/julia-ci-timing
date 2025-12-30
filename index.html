@@ -1368,17 +1368,6 @@
             }
         }
 
-        function toggleHostFilter(host, checkbox) {
-            if (excludedHosts.has(host)) {
-                excludedHosts.delete(host);
-            } else {
-                excludedHosts.add(host);
-            }
-            updateHostFilterLabel();
-            updateChart();
-            updateStatsTable();
-        }
-
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             const hostDropdown = document.getElementById('host-filter-dropdown');
@@ -2129,28 +2118,6 @@
                 const muteColor = (c) => {
                     if (typeof c === 'string') return colorToRgba(c, 0.25);
                     return c;
-                };
-
-                // Helper to mute point colors array or single value
-                const mutePointColors = (colors) => {
-                    if (Array.isArray(colors)) {
-                        return colors.map(muteColor);
-                    } else if (typeof colors === 'string') {
-                        return muteColor(colors);
-                    }
-                    return colors;
-                };
-
-                // Helper to mute point styles (for timeout markers)
-                const mutePointStyles = (styles, origColors) => {
-                    if (!Array.isArray(styles)) return styles;
-                    return styles.map((style, ptIdx) => {
-                        if (style instanceof HTMLCanvasElement) {
-                            const origColor = Array.isArray(origColors) ? origColors[ptIdx] : origColors;
-                            return getMutedTimedOutMarker(origColor);
-                        }
-                        return style;
-                    });
                 };
 
                 if (isJobMatch && !agent) {
