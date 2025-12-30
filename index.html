@@ -2089,6 +2089,9 @@
                             max: xMax,
                             time: {
                                 displayFormats: {
+                                    second: 'HH:mm:ss',
+                                    minute: 'HH:mm',
+                                    hour: 'MMM d HH:mm',
                                     day: 'MMM d',
                                     week: 'MMM d',
                                     month: 'MMM yyyy'
@@ -2100,6 +2103,47 @@
                                 callback: function(value, index, ticks) {
                                     const date = new Date(value);
                                     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                    
+                                    // Determine time range to decide format
+                                    const rangeMs = ticks.length >= 2 
+                                        ? ticks[ticks.length - 1].value - ticks[0].value 
+                                        : Infinity;
+                                    const MINUTE = 60 * 1000;
+                                    const HOUR = 60 * MINUTE;
+                                    const DAY = 24 * HOUR;
+                                    
+                                    const hours = date.getHours().toString().padStart(2, '0');
+                                    const mins = date.getMinutes().toString().padStart(2, '0');
+                                    const secs = date.getSeconds().toString().padStart(2, '0');
+                                    
+                                    // For ranges under 10 minutes, show seconds
+                                    if (rangeMs < 10 * MINUTE) {
+                                        const timeStr = `${hours}:${mins}:${secs}`;
+                                        if (index === 0) {
+                                            return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
+                                        }
+                                        const prevDate = index > 0 ? new Date(ticks[index - 1].value) : null;
+                                        if (prevDate && prevDate.getDate() !== date.getDate()) {
+                                            return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
+                                        }
+                                        return timeStr;
+                                    }
+                                    
+                                    // For ranges under 3 days, show time (hours:minutes)
+                                    if (rangeMs < 3 * DAY) {
+                                        const timeStr = `${hours}:${mins}`;
+                                        // Show date on first tick or when date changes
+                                        if (index === 0) {
+                                            return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
+                                        }
+                                        const prevDate = index > 0 ? new Date(ticks[index - 1].value) : null;
+                                        if (prevDate && prevDate.getDate() !== date.getDate()) {
+                                            return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
+                                        }
+                                        return timeStr;
+                                    }
+                                    
+                                    // Default: day-level labels
                                     const label = `${months[date.getMonth()]} ${date.getDate()}`;
                                     // Show year on first tick and when year changes
                                     if (index === 0) {
@@ -2115,18 +2159,49 @@
                             grid: { color: gridColor },
                             afterBuildTicks: (axis) => {
                                 const rangeMs = axis.max - axis.min;
-                                const DAY = 24 * 60 * 60 * 1000;
-                                // Nice intervals: 1w, 2w, 1mo
-                                const niceSteps = [7*DAY, 14*DAY, 30*DAY];
+                                const SECOND = 1000;
+                                const MINUTE = 60 * SECOND;
+                                const HOUR = 60 * MINUTE;
+                                const DAY = 24 * HOUR;
+                                
+                                // Nice intervals from seconds to months
+                                const niceSteps = [
+                                    5*SECOND, 10*SECOND, 15*SECOND, 30*SECOND,
+                                    MINUTE, 2*MINUTE, 5*MINUTE, 10*MINUTE, 15*MINUTE, 30*MINUTE,
+                                    HOUR, 2*HOUR, 4*HOUR, 6*HOUR, 12*HOUR,
+                                    DAY, 2*DAY, 7*DAY, 14*DAY, 30*DAY
+                                ];
+                                // Find smallest step that gives <= 12 ticks
                                 let step = niceSteps.find(s => rangeMs / s <= 12) || 30*DAY;
 
-                                // Round min to start of day
+                                // Round min to appropriate boundary
                                 const minDate = new Date(axis.min);
-                                minDate.setHours(0, 0, 0, 0);
-                                let minTick = minDate.getTime();
-                                // Align to week boundary (Sunday)
-                                const dayOfWeek = minDate.getDay();
-                                minTick -= dayOfWeek * DAY;
+                                let minTick;
+                                
+                                if (step < MINUTE) {
+                                    // Align to second boundary
+                                    minDate.setMilliseconds(0);
+                                    minTick = minDate.getTime();
+                                } else if (step < HOUR) {
+                                    // Align to minute boundary
+                                    minDate.setSeconds(0, 0);
+                                    minTick = minDate.getTime();
+                                } else if (step < DAY) {
+                                    // Align to hour boundary
+                                    minDate.setMinutes(0, 0, 0);
+                                    minTick = minDate.getTime();
+                                } else if (step < 7*DAY) {
+                                    // Align to day boundary
+                                    minDate.setHours(0, 0, 0, 0);
+                                    minTick = minDate.getTime();
+                                } else {
+                                    // Align to week boundary (Sunday)
+                                    minDate.setHours(0, 0, 0, 0);
+                                    minTick = minDate.getTime();
+                                    const dayOfWeek = minDate.getDay();
+                                    minTick -= dayOfWeek * DAY;
+                                }
+                                
                                 // Move to first tick after axis.min
                                 while (minTick < axis.min) minTick += step;
 
