@@ -831,13 +831,13 @@
         </select>
         <div class="checkbox-dropdown" id="state-filter-dropdown">
             <button class="checkbox-dropdown-btn" onclick="toggleStateDropdown(event)" aria-label="State filter">
-                <span id="state-filter-label">All states</span>
+                <span id="state-filter-label">States (3/4)</span>
             </button>
             <div class="checkbox-dropdown-menu" id="state-filter-menu">
                 <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('passed', this)"> Passed</label>
                 <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('failed', this)"> Failed</label>
                 <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('timed_out', this)"> Timed out</label>
-                <label class="checkbox-dropdown-item"><input type="checkbox" checked onchange="toggleStateFilter('canceled', this)"> Canceled</label>
+                <label class="checkbox-dropdown-item"><input type="checkbox" onchange="toggleStateFilter('canceled', this)"> Canceled</label>
             </div>
         </div>
         <div class="checkbox-dropdown" id="host-filter-dropdown">
@@ -942,7 +942,7 @@
         let selectedJobs = new Set();
         let timeRangeDays = DEFAULT_TIME_RANGE;
         let lineType = DEFAULT_LINE_TYPE;
-        let excludedStates = new Set();  // States to exclude from display
+        let excludedStates = new Set(['canceled']);  // States to exclude from display (canceled hidden by default)
         let excludedHosts = new Set();  // Hosts to exclude from display
         let expandedJobs = new Set();  // Jobs expanded in stats table
         let jobColors = {};
@@ -1112,7 +1112,6 @@
             const sumY = points.reduce((s, p) => s + p.y, 0);
             const sumXY = points.reduce((s, p) => s + p.x * p.y, 0);
             const sumX2 = points.reduce((s, p) => s + p.x * p.x, 0);
-            const sumY2 = points.reduce((s, p) => s + p.y * p.y, 0);
 
             const meanX = sumX / n;
             const meanY = sumY / n;
@@ -1149,38 +1148,127 @@
             const startValue = intercept + slope * minX;
             const endValue = intercept + slope * maxX;
             const percentChange = startValue > 0 ? ((endValue - startValue) / startValue) * 100 : 0;
+            const absoluteDelta = endValue - startValue;  // Total change in seconds
+
+            // Require both statistical significance AND meaningful effect size
+            // R² > 0.1 means the trend explains at least 10% of variance
+            const isSignificant = pValue < 0.05 && rSquared > 0.1;
 
             return {
                 slope,           // seconds per day
                 slopePerDay: slope,
                 pValue,
                 rSquared,
-                significant: pValue < 0.05,
+                significant: isSignificant,
                 direction: slope > 0 ? 'up' : slope < 0 ? 'down' : 'flat',
                 percentChange,
+                absoluteDelta,
+                intercept,       // y-intercept for regression line
+                minX,            // earliest time (days since epoch)
+                maxX,            // latest time (days since epoch)
                 n
             };
         }
 
         // Approximate two-tailed p-value for t-distribution
         function tDistributionPValue(t, df) {
-            // Using approximation from Abramowitz and Stegun
+            // For very small t, not significant
+            if (Math.abs(t) < 0.001) return 1.0;
+
+            // Use normal approximation for large df
+            if (df >= 30) {
+                return 2 * (1 - normalCDF(Math.abs(t)));
+            }
+
+            // For smaller df, use the beta function relationship:
+            // p-value = I(df/(df+t²), df/2, 1/2) where I is the regularized incomplete beta
+            // Approximation using Student's t-distribution properties
             const x = df / (df + t * t);
-            // Regularized incomplete beta function approximation
+
+            // Continued fraction approximation for incomplete beta
+            // This is more accurate for small df
             const a = df / 2;
             const b = 0.5;
 
-            // Simple approximation for p-value
-            if (df >= 30) {
-                // For large df, t approaches normal
-                const z = t;
-                return 2 * (1 - normalCDF(Math.abs(z)));
+            // Use series expansion approximation
+            let betaI;
+            if (x < (a + 1) / (a + b + 2)) {
+                betaI = betaIncomplete(x, a, b);
+            } else {
+                betaI = 1 - betaIncomplete(1 - x, b, a);
             }
 
-            // For smaller df, use a rougher approximation
-            // This is a simplified approximation
-            const p = Math.exp(-0.5 * t * t) * Math.sqrt(df / (df + t * t));
-            return Math.min(1, Math.max(0, 2 * p * (1 + 0.5 / df)));
+            return Math.min(1, Math.max(0, betaI));
+        }
+
+        // Regularized incomplete beta function approximation
+        function betaIncomplete(x, a, b) {
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+
+            // Use series expansion for small x
+            const lnBeta = gammaLn(a) + gammaLn(b) - gammaLn(a + b);
+            const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lnBeta) / a;
+
+            // Lentz's algorithm for continued fraction
+            const maxIter = 100;
+            const eps = 1e-10;
+
+            let f = 1, c = 1, d = 0;
+            for (let m = 0; m <= maxIter; m++) {
+                const m2 = 2 * m;
+
+                // Even step
+                let aa = (m === 0) ? 1 : (m * (b - m) * x) / ((a + m2 - 1) * (a + m2));
+                d = 1 + aa * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = 1 + aa / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                f *= d * c;
+
+                // Odd step
+                aa = -((a + m) * (a + b + m) * x) / ((a + m2) * (a + m2 + 1));
+                d = 1 + aa * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = 1 + aa / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                const delta = d * c;
+                f *= delta;
+
+                if (Math.abs(delta - 1) < eps) break;
+            }
+
+            return front * f;
+        }
+
+        // Log gamma function approximation (Lanczos)
+        function gammaLn(x) {
+            const g = 7;
+            const c = [
+                0.99999999999980993,
+                676.5203681218851,
+                -1259.1392167224028,
+                771.32342877765313,
+                -176.61502916214059,
+                12.507343278686905,
+                -0.13857109526572012,
+                9.9843695780195716e-6,
+                1.5056327351493116e-7
+            ];
+
+            if (x < 0.5) {
+                return Math.log(Math.PI / Math.sin(Math.PI * x)) - gammaLn(1 - x);
+            }
+
+            x -= 1;
+            let sum = c[0];
+            for (let i = 1; i < g + 2; i++) {
+                sum += c[i] / (x + i);
+            }
+            const t = x + g + 0.5;
+            return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(sum);
         }
 
         function normalCDF(x) {
@@ -1200,14 +1288,13 @@
             return 0.5 * (1.0 + sign * y);
         }
 
-        function formatTrend(trend) {
+        function formatTrend(trend, lineColor = null) {
             if (!trend || trend.n < 3) {
-                return '<span style="color: var(--color-fg-muted)" title="Not enough data points">—</span>';
+                return { html: '<span style="color: var(--color-fg-muted)" title="Not enough data points">—</span>', trendData: null };
             }
 
-            const { slope, pValue, significant, rSquared, percentChange } = trend;
+            const { slope, pValue, significant, rSquared, percentChange, absoluteDelta } = trend;
             const absSlope = Math.abs(slope);
-            const absPct = Math.abs(percentChange);
 
             // Convert slope to human-readable format (per day)
             let slopeText;
@@ -1217,6 +1304,15 @@
                 slopeText = `${absSlope.toFixed(1)}s/day`;
             } else {
                 slopeText = `${(absSlope / 60).toFixed(1)}m/day`;
+            }
+
+            // Format absolute delta
+            const absDelta = Math.abs(absoluteDelta);
+            let deltaText;
+            if (absDelta < 60) {
+                deltaText = `${absoluteDelta >= 0 ? '+' : '-'}${absDelta.toFixed(1)}s`;
+            } else {
+                deltaText = `${absoluteDelta >= 0 ? '+' : '-'}${(absDelta / 60).toFixed(1)}m`;
             }
 
             // Format percentage change
@@ -1239,11 +1335,89 @@
             // Confidence indicator
             const confidence = significant ? (pValue < 0.01 ? '★★' : '★') : '';
             const pText = pValue < 0.001 ? '<0.001' : pValue.toFixed(3);
-            const title = `${slope > 0 ? '+' : ''}${slopeText} (${pctText} over period)\np-value: ${pText}\nR²: ${(rSquared * 100).toFixed(1)}%\n${significant ? 'Statistically significant' : 'Not significant'}`;
+            const title = `${slope > 0 ? '+' : ''}${slopeText} (${pctText}, ${deltaText} over period)\np-value: ${pText}\nR²: ${(rSquared * 100).toFixed(1)}%\n${significant ? 'Statistically significant' : 'Not significant'}`;
 
             const displayText = significant ? `${pctText}` : 'flat';
-            return `<span style="color: ${color}" title="${title}">${arrow} ${displayText} ${confidence}</span>`;
+
+            // Encode trend data for hover handlers (include line color)
+            const trendData = JSON.stringify({
+                slope: trend.slope,
+                intercept: trend.intercept,
+                minX: trend.minX,
+                maxX: trend.maxX,
+                lineColor: lineColor || 'rgba(128, 128, 128, 0.8)'
+            }).replace(/'/g, '&#39;');
+
+            // Return content designed to be placed in a td with class="trend-cell"
+            return { html: `<span style="color: ${color}" title="${title}">${arrow} ${displayText} ${confidence}</span>`, trendData };
         }
+
+        // Regression line dataset management
+        let regressionLineDataset = null;
+
+        function showRegressionLine(trendData, lineColor = 'rgba(128, 128, 128, 0.7)') {
+            if (!chart || !trendData) return;
+
+            const { slope, intercept, minX, maxX } = trendData;
+
+            // Convert days since epoch back to milliseconds
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const startX = minX * msPerDay;
+            const endX = maxX * msPerDay;
+            const startY = intercept + slope * minX;
+            const endY = intercept + slope * maxX;
+
+            // Create regression line dataset
+            regressionLineDataset = {
+                label: 'Trend line',
+                data: [
+                    { x: new Date(startX), y: startY },
+                    { x: new Date(endX), y: endY }
+                ],
+                borderColor: lineColor,
+                borderWidth: 2,
+                borderDash: [6, 4],
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                tension: 0,
+                order: -1  // Draw on top
+            };
+
+            chart.data.datasets.push(regressionLineDataset);
+            chart.update('none');
+        }
+
+        function hideRegressionLine() {
+            if (!chart || !regressionLineDataset) return;
+
+            const idx = chart.data.datasets.indexOf(regressionLineDataset);
+            if (idx !== -1) {
+                chart.data.datasets.splice(idx, 1);
+                chart.update('none');
+            }
+            regressionLineDataset = null;
+        }
+
+        // Event delegation for trend cell hover
+        document.addEventListener('mouseenter', (e) => {
+            const cell = e.target.closest('.trend-cell');
+            if (cell && cell.dataset.trend) {
+                try {
+                    const trendData = JSON.parse(cell.dataset.trend.replace(/&#39;/g, "'"));
+                    showRegressionLine(trendData, trendData.lineColor);
+                } catch (err) {
+                    // Ignore parse errors
+                }
+            }
+        }, true);
+
+        document.addEventListener('mouseleave', (e) => {
+            const cell = e.target.closest('.trend-cell');
+            if (cell) {
+                hideRegressionLine();
+            }
+        }, true);
 
         function filterRunsByState(runs, cutoff, maxCutoff = null, filterHosts = true) {
             return runs.filter(r => {
@@ -2597,7 +2771,7 @@
                 // Collect agent counts from all runs in range (not just filtered by state)
                 const allRunsInRange = job.recent.filter(r => {
                     const date = new Date(r.date);
-                    return date >= rangeMin && date <= rangeMax &&
+                    return (!rangeMin || date >= rangeMin) && (!rangeMax || date <= rangeMax) &&
                            (excludedHosts.size === 0 || !excludedHosts.has(r.agent));
                 });
                 const agentCounts = {};
@@ -2626,12 +2800,10 @@
                     rate: prPassed / prTotal
                 } : null;
 
-                // Duration stats from passed runs only
-                const passedRuns = filtered.filter(r => (r.state || 'passed') === 'passed');
-
+                // Duration stats from all visible runs (respects state filter)
                 let median = null, mean = null, min = null, max = null, std = null, trend = null;
-                if (passedRuns.length > 0) {
-                    const durations = passedRuns.map(r => r.duration);
+                if (filtered.length > 0) {
+                    const durations = filtered.map(r => r.duration);
                     const sorted = [...durations].sort((a, b) => a - b);
                     median = sorted[Math.floor(sorted.length / 2)];
                     mean = durations.reduce((a, b) => a + b, 0) / durations.length;
@@ -2639,7 +2811,7 @@
                     max = Math.max(...durations);
                     const variance = durations.reduce((sum, d) => sum + (d - mean) ** 2, 0) / durations.length;
                     std = Math.sqrt(variance);
-                    trend = computeTrend(passedRuns);
+                    trend = computeTrend(filtered);
                 }
 
                 jobStats.push({
@@ -2653,7 +2825,7 @@
                     std,
                     trend,
                     pr,
-                    n: passedRuns.length
+                    n: filtered.length
                 });
             }
 
@@ -2710,6 +2882,84 @@
             });
 
             // Render rows
+
+            // Add "All" aggregate row when multiple jobs selected
+            if (jobStats.length > 1) {
+                // Aggregate all durations from all jobs
+                const allFilteredRuns = [];
+                let allPassed = 0, allFailed = 0, allTimedOut = 0, allCanceled = 0, allTotal = 0;
+                let allN = 0;
+
+                for (const stat of jobStats) {
+                    if (stat.pr) {
+                        allPassed += stat.pr.passed;
+                        allFailed += stat.pr.failed;
+                        allTimedOut += stat.pr.timedOut;
+                        allCanceled += stat.pr.canceled;
+                        allTotal += stat.pr.total;
+                    }
+                    allN += stat.n;
+                }
+
+                // Collect all visible runs with dates for aggregate stats and trend
+                for (const jobName of selectedJobs) {
+                    const job = data.jobs[jobName];
+                    if (!job) continue;
+                    const filtered = filterRunsByState(job.recent, rangeMin, rangeMax);
+                    for (const r of filtered) {
+                        allFilteredRuns.push(r);
+                    }
+                }
+
+                const allDurations = allFilteredRuns.map(r => r.duration);
+                let aggMedian = null, aggMean = null, aggMin = null, aggMax = null, aggStd = null, aggTrend = null;
+                if (allDurations.length > 0) {
+                    const sorted = [...allDurations].sort((a, b) => a - b);
+                    aggMedian = sorted[Math.floor(sorted.length / 2)];
+                    aggMean = allDurations.reduce((a, b) => a + b, 0) / allDurations.length;
+                    aggMin = Math.min(...allDurations);
+                    aggMax = Math.max(...allDurations);
+                    const variance = allDurations.reduce((sum, d) => sum + (d - aggMean) ** 2, 0) / allDurations.length;
+                    aggStd = Math.sqrt(variance);
+                    aggTrend = computeTrend(allFilteredRuns);
+                }
+
+                let aggPassRateHtml = '<span style="color: var(--color-fg-muted)">—</span>';
+                if (allTotal > 0) {
+                    const aggRate = allPassed / allTotal;
+                    const aggPct = Math.round(aggRate * 100);
+                    const isLow = allTotal >= PASS_RATE_MIN_RUNS && aggRate < PASS_RATE_THRESHOLD;
+                    const prColor = isLow ? 'var(--color-danger-fg)' : (aggRate < 1 ? 'var(--color-attention-fg)' : 'var(--color-success-fg)');
+                    const icon = isLow ? '⚠️ ' : '';
+                    const parts = [];
+                    if (allFailed > 0) parts.push(`${allFailed} failed`);
+                    if (allTimedOut > 0) parts.push(`${allTimedOut} timed out`);
+                    if (allCanceled > 0) parts.push(`${allCanceled} canceled`);
+                    const breakdown = parts.length > 0 ? parts.join(', ') : 'all passed';
+                    aggPassRateHtml = `<span style="color: ${prColor}" title="${breakdown} out of ${allTotal} total runs">${icon}${aggPct}%</span>`;
+                }
+
+                const aggRow = document.createElement('tr');
+                aggRow.style.cssText = 'font-weight: 600; border-bottom: 2px solid var(--color-border-default);';
+                const aggTrendResult = formatTrend(aggTrend);
+                const aggTrendCell = aggTrendResult.trendData
+                    ? `<td class="trend-cell" data-trend='${aggTrendResult.trendData}'>${aggTrendResult.html}</td>`
+                    : `<td>${aggTrendResult.html}</td>`;
+                aggRow.innerHTML = `
+                    <td>All (${jobStats.length} jobs)</td>
+                    <td></td>
+                    <td>${aggPassRateHtml}</td>
+                    <td class="duration">${formatDuration(aggMedian)}</td>
+                    <td class="duration">${formatDuration(aggMean)}</td>
+                    <td class="duration">${formatDuration(aggMin)}</td>
+                    <td class="duration">${formatDuration(aggMax)}</td>
+                    <td class="duration">${aggStd != null ? '±' + formatDuration(aggStd) : formatDuration(null)}</td>
+                    ${aggTrendCell}
+                    <td>${allN}</td>
+                `;
+                tbody.appendChild(aggRow);
+            }
+
             for (const stat of jobStats) {
                 const { jobName, color, agents, median, mean, min, max, std, trend, pr, n } = stat;
 
@@ -2753,6 +3003,10 @@
                 }
                 row.onmouseenter = () => highlightChartDataset(color);
                 row.onmouseleave = () => clearChartHighlight();
+                const trendResult = formatTrend(trend, color);
+                const trendCell = trendResult.trendData
+                    ? `<td class="trend-cell" data-trend='${trendResult.trendData}'>${trendResult.html}</td>`
+                    : `<td>${trendResult.html}</td>`;
                 row.innerHTML = `
                     <td><span class="color-dot" style="background: ${color}"></span> ${convertEmoji(jobName)}</td>
                     <td>${hostsHtml}</td>
@@ -2762,7 +3016,7 @@
                     <td class="duration">${formatDuration(min)}</td>
                     <td class="duration">${formatDuration(max)}</td>
                     <td class="duration">${std != null ? '±' + formatDuration(std) : formatDuration(null)}</td>
-                    <td>${formatTrend(trend)}</td>
+                    ${trendCell}
                     <td>${n}</td>
                 `;
                 tbody.appendChild(row);
@@ -2781,23 +3035,26 @@
                             : 0;
                         const hostColor = shiftHue(color, hueShift);
 
-                        // Calculate stats for this host only (passed runs only for duration stats)
+                        // Calculate stats for this host only (respects state filter)
                         const allHostRuns = job.recent.filter(r => {
                             if (r.agent !== agent) return false;
                             const date = new Date(r.date);
                             return date >= rangeMin && date <= rangeMax;
                         });
-                        const hostPassedRuns = allHostRuns.filter(r => (r.state || 'passed') === 'passed');
-                        const hostDurations = hostPassedRuns.map(r => r.duration);
+                        const hostFilteredRuns = allHostRuns.filter(r => {
+                            const runState = getRunState(r);
+                            return excludedStates.size === 0 || !excludedStates.has(runState);
+                        });
+                        const hostDurations = hostFilteredRuns.map(r => r.duration);
                         const hostSorted = [...hostDurations].sort((a, b) => a - b);
-                        const hostMedian = hostDurations.length > 0 ? hostSorted[Math.floor(hostSorted.length / 2)] : 0;
+                        const hostMedian = hostDurations.length > 0 ? hostSorted[Math.floor(hostDurations.length / 2)] : 0;
                         const hostMean = hostDurations.length > 0 ? hostDurations.reduce((a, b) => a + b, 0) / hostDurations.length : 0;
                         const hostMin = hostDurations.length > 0 ? Math.min(...hostDurations) : 0;
                         const hostMax = hostDurations.length > 0 ? Math.max(...hostDurations) : 0;
                         const hostVariance = hostDurations.length > 0 ? hostDurations.reduce((sum, d) => sum + (d - hostMean) ** 2, 0) / hostDurations.length : 0;
                         const hostStd = Math.sqrt(hostVariance);
-                        const hostTrend = computeTrend(hostPassedRuns);
-                        const hostN = hostPassedRuns.length;
+                        const hostTrend = computeTrend(hostFilteredRuns);
+                        const hostN = hostFilteredRuns.length;
 
                         // Calculate pass rate for this host from all runs in time range
                         let hostPrHtml = '<span style="color: var(--color-fg-muted)">—</span>';
@@ -2828,6 +3085,10 @@
                         hostRow.className = 'host-row';
                         hostRow.onmouseenter = () => highlightChartDataset(color, agent);
                         hostRow.onmouseleave = () => clearChartHighlight();
+                        const hostTrendResult = formatTrend(hostTrend, hostColor);
+                        const hostTrendCell = hostTrendResult.trendData
+                            ? `<td class="trend-cell" data-trend='${hostTrendResult.trendData}'>${hostTrendResult.html}</td>`
+                            : `<td>${hostTrendResult.html}</td>`;
                         hostRow.innerHTML = `
                             <td><span class="color-dot" style="background: ${hostColor}"></span> ${agent}</td>
                             <td></td>
@@ -2837,7 +3098,7 @@
                             <td class="duration">${formatDuration(hostMin)}</td>
                             <td class="duration">${formatDuration(hostMax)}</td>
                             <td class="duration">±${formatDuration(hostStd)}</td>
-                            <td>${formatTrend(hostTrend)}</td>
+                            ${hostTrendCell}
                             <td>${hostN}</td>
                         `;
                         tbody.appendChild(hostRow);
@@ -3186,20 +3447,43 @@
             }
         }
 
-        // Restore collapsed section states from localStorage
+        // Restore collapsed section states from localStorage (mobile only)
         function restoreSectionStates() {
+            const isMobile = window.innerWidth <= 480;
             document.querySelectorAll('.section-header[id]').forEach(header => {
-                try {
-                    const saved = localStorage.getItem(`section-${header.id}`);
-                    if (saved === '1') {
-                        header.classList.add('collapsed');
-                        const content = header.nextElementSibling;
-                        if (content) content.classList.add('collapsed');
-                    }
-                } catch (e) { /* ignore */ }
+                const content = header.nextElementSibling;
+                if (isMobile) {
+                    // On mobile, restore saved state
+                    try {
+                        const saved = localStorage.getItem(`section-${header.id}`);
+                        if (saved === '1') {
+                            header.classList.add('collapsed');
+                            if (content) content.classList.add('collapsed');
+                        } else {
+                            header.classList.remove('collapsed');
+                            if (content) content.classList.remove('collapsed');
+                        }
+                    } catch (e) { /* ignore */ }
+                } else {
+                    // On larger screens, always show sections expanded
+                    header.classList.remove('collapsed');
+                    if (content) content.classList.remove('collapsed');
+                }
             });
         }
         restoreSectionStates();
+
+        // Re-check section visibility on resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 480) {
+                // Ensure sections are expanded on larger screens
+                document.querySelectorAll('.section-header[id]').forEach(header => {
+                    header.classList.remove('collapsed');
+                    const content = header.nextElementSibling;
+                    if (content) content.classList.remove('collapsed');
+                });
+            }
+        });
 
         function toggleMatrixCell(platform, type) {
             toggleJobsSelection(jobMatrix[platform][type]);
