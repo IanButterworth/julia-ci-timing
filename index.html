@@ -2321,6 +2321,7 @@
             }
 
             if (chart) chart.destroy();
+            highlightActive = false;  // Reset highlight state when chart is recreated
 
             const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             const gridColor = isDark ? '#30363d' : '#d0d7de';
@@ -2458,12 +2459,18 @@
                                 color: textColor,
                                 maxRotation: 45,
                                 callback: function(value, index, ticks) {
+                                    // Hide labels for minor ticks
+                                    if (ticks[index] && ticks[index].minor) {
+                                        return '';
+                                    }
+                                    
                                     const date = new Date(value);
                                     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-                                    // Determine time range to decide format
-                                    const rangeMs = ticks.length >= 2
-                                        ? ticks[ticks.length - 1].value - ticks[0].value
+                                    // Determine time range to decide format (only count major ticks)
+                                    const majorTicks = ticks.filter(t => !t.minor);
+                                    const rangeMs = majorTicks.length >= 2
+                                        ? majorTicks[majorTicks.length - 1].value - majorTicks[0].value
                                         : Infinity;
                                     const MINUTE = 60 * 1000;
                                     const HOUR = 60 * MINUTE;
@@ -2472,14 +2479,24 @@
                                     const hours = date.getHours().toString().padStart(2, '0');
                                     const mins = date.getMinutes().toString().padStart(2, '0');
                                     const secs = date.getSeconds().toString().padStart(2, '0');
+                                    
+                                    // Find previous major tick for date comparison
+                                    let prevMajorTick = null;
+                                    for (let i = index - 1; i >= 0; i--) {
+                                        if (!ticks[i].minor) {
+                                            prevMajorTick = ticks[i];
+                                            break;
+                                        }
+                                    }
+                                    const prevDate = prevMajorTick ? new Date(prevMajorTick.value) : null;
+                                    const isFirstMajor = !prevMajorTick;
 
                                     // For ranges under 10 minutes, show seconds
                                     if (rangeMs < 10 * MINUTE) {
                                         const timeStr = `${hours}:${mins}:${secs}`;
-                                        if (index === 0) {
+                                        if (isFirstMajor) {
                                             return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
                                         }
-                                        const prevDate = index > 0 ? new Date(ticks[index - 1].value) : null;
                                         if (prevDate && prevDate.getDate() !== date.getDate()) {
                                             return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
                                         }
@@ -2490,10 +2507,9 @@
                                     if (rangeMs < 3 * DAY) {
                                         const timeStr = `${hours}:${mins}`;
                                         // Show date on first tick or when date changes
-                                        if (index === 0) {
+                                        if (isFirstMajor) {
                                             return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
                                         }
-                                        const prevDate = index > 0 ? new Date(ticks[index - 1].value) : null;
                                         if (prevDate && prevDate.getDate() !== date.getDate()) {
                                             return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
                                         }
@@ -2503,17 +2519,24 @@
                                     // Default: day-level labels
                                     const label = `${months[date.getMonth()]} ${date.getDate()}`;
                                     // Show year on first tick and when year changes
-                                    if (index === 0) {
+                                    if (isFirstMajor) {
                                         return `${label} '${date.getFullYear().toString().slice(-2)}`;
                                     }
-                                    const prevDate = index > 0 ? new Date(ticks[index - 1].value) : null;
                                     if (prevDate && prevDate.getFullYear() !== date.getFullYear()) {
                                         return `${label} '${date.getFullYear().toString().slice(-2)}`;
                                     }
                                     return label;
                                 }
                             },
-                            grid: { color: gridColor },
+                            grid: { 
+                                color: (ctx) => {
+                                    // Minor grid lines are lighter
+                                    if (ctx.tick && ctx.tick.minor) {
+                                        return isDark ? 'rgba(48, 54, 61, 0.5)' : 'rgba(208, 215, 222, 0.5)';
+                                    }
+                                    return gridColor;
+                                }
+                            },
                             afterBuildTicks: (axis) => {
                                 const rangeMs = axis.max - axis.min;
                                 const SECOND = 1000;
@@ -2521,15 +2544,34 @@
                                 const HOUR = 60 * MINUTE;
                                 const DAY = 24 * HOUR;
 
-                                // Nice intervals from seconds to months
-                                const niceSteps = [
-                                    5*SECOND, 10*SECOND, 15*SECOND, 30*SECOND,
-                                    MINUTE, 2*MINUTE, 5*MINUTE, 10*MINUTE, 15*MINUTE, 30*MINUTE,
-                                    HOUR, 2*HOUR, 4*HOUR, 6*HOUR, 12*HOUR,
-                                    DAY, 2*DAY, 7*DAY, 14*DAY, 30*DAY
+                                // Nice intervals from seconds to months, with minor tick subdivisions
+                                const niceStepsWithMinor = [
+                                    { step: 5*SECOND, minor: SECOND },
+                                    { step: 10*SECOND, minor: 2*SECOND },
+                                    { step: 15*SECOND, minor: 5*SECOND },
+                                    { step: 30*SECOND, minor: 10*SECOND },
+                                    { step: MINUTE, minor: 15*SECOND },
+                                    { step: 2*MINUTE, minor: 30*SECOND },
+                                    { step: 5*MINUTE, minor: MINUTE },
+                                    { step: 10*MINUTE, minor: 2*MINUTE },
+                                    { step: 15*MINUTE, minor: 5*MINUTE },
+                                    { step: 30*MINUTE, minor: 10*MINUTE },
+                                    { step: HOUR, minor: 15*MINUTE },
+                                    { step: 2*HOUR, minor: 30*MINUTE },
+                                    { step: 4*HOUR, minor: HOUR },
+                                    { step: 6*HOUR, minor: 2*HOUR },
+                                    { step: 12*HOUR, minor: 3*HOUR },
+                                    { step: DAY, minor: 6*HOUR },
+                                    { step: 2*DAY, minor: DAY },
+                                    { step: 7*DAY, minor: DAY },
+                                    { step: 14*DAY, minor: 7*DAY },
+                                    { step: 30*DAY, minor: 7*DAY }
                                 ];
-                                // Find smallest step that gives <= 12 ticks
-                                let step = niceSteps.find(s => rangeMs / s <= 12) || 30*DAY;
+                                
+                                // Find smallest step that gives <= 12 major ticks
+                                const config = niceStepsWithMinor.find(c => rangeMs / c.step <= 12) || { step: 30*DAY, minor: 7*DAY };
+                                const step = config.step;
+                                const minorStep = config.minor;
 
                                 // Round min to appropriate boundary
                                 const minDate = new Date(axis.min);
@@ -2560,11 +2602,14 @@
                                 }
 
                                 // Move to first tick after axis.min
-                                while (minTick < axis.min) minTick += step;
+                                while (minTick < axis.min) minTick += minorStep;
 
+                                // Generate ticks with minor flag
                                 const ticks = [];
-                                for (let v = minTick; v <= axis.max; v += step) {
-                                    ticks.push({ value: v });
+                                for (let v = minTick; v <= axis.max; v += minorStep) {
+                                    // Check if this is a major tick (aligned to step)
+                                    const isMajor = Math.abs(v % step) < minorStep / 2 || Math.abs((v % step) - step) < minorStep / 2;
+                                    ticks.push({ value: v, major: isMajor, minor: !isMajor });
                                 }
                                 if (ticks.length > 0) axis.ticks = ticks;
                             }
@@ -2572,6 +2617,11 @@
                         y: {
                             min: customYMin || undefined,
                             max: customYMax || undefined,
+                            title: {
+                                display: true,
+                                text: 'Duration',
+                                color: textColor
+                            },
                             ticks: {
                                 color: textColor,
                                 callback: (v) => formatDuration(v),
@@ -2815,7 +2865,7 @@
 
         // Highlight a specific job/agent in the chart, de-emphasizing others
         let highlightActive = false;
-        function highlightChartDataset(jobColor, agent = null) {
+        function highlightChartDataset(jobColor, agent = null, yAxisID = 'y') {
             if (!chart) return;
 
             // Store original values on first highlight
@@ -2829,7 +2879,53 @@
                     ds._originalPointBorderColor = ds.pointBorderColor;
                     ds._originalPointStyle = ds.pointStyle;
                 });
+                // Store original axis colors (title and ticks)
+                if (chart.options.scales.y) {
+                    if (chart.options.scales.y.title) {
+                        chart.options.scales.y.title._originalColor = chart.options.scales.y.title.color;
+                    }
+                    if (chart.options.scales.y.ticks) {
+                        chart.options.scales.y.ticks._originalColor = chart.options.scales.y.ticks.color;
+                    }
+                }
+                if (chart.options.scales.y2) {
+                    if (chart.options.scales.y2.title) {
+                        chart.options.scales.y2.title._originalColor = chart.options.scales.y2.title.color;
+                    }
+                    if (chart.options.scales.y2.ticks) {
+                        chart.options.scales.y2.ticks._originalColor = chart.options.scales.y2.ticks.color;
+                    }
+                }
                 highlightActive = true;
+            }
+
+            // Highlight the relevant y-axis (title and ticks)
+            const mutedAxisColor = 'rgba(128, 128, 128, 0.4)';
+            if (chart.options.scales.y) {
+                const isHighlighted = yAxisID === 'y';
+                if (chart.options.scales.y.title) {
+                    chart.options.scales.y.title.color = isHighlighted 
+                        ? chart.options.scales.y.title._originalColor 
+                        : mutedAxisColor;
+                }
+                if (chart.options.scales.y.ticks) {
+                    chart.options.scales.y.ticks.color = isHighlighted 
+                        ? chart.options.scales.y.ticks._originalColor 
+                        : mutedAxisColor;
+                }
+            }
+            if (chart.options.scales.y2) {
+                const isHighlighted = yAxisID === 'y2';
+                if (chart.options.scales.y2.title) {
+                    chart.options.scales.y2.title.color = isHighlighted 
+                        ? chart.options.scales.y2.title._originalColor 
+                        : mutedAxisColor;
+                }
+                if (chart.options.scales.y2.ticks) {
+                    chart.options.scales.y2.ticks.color = isHighlighted 
+                        ? chart.options.scales.y2.ticks._originalColor 
+                        : mutedAxisColor;
+                }
             }
 
             chart.data.datasets.forEach((ds, dsIdx) => {
@@ -2923,16 +3019,33 @@
             if (!chart || !highlightActive) return;
 
             chart.data.datasets.forEach(ds => {
-                ds.borderColor = ds._originalBorderColor;
-                ds.backgroundColor = ds._originalBackgroundColor;
-                ds.borderWidth = ds._originalBorderWidth;
-                ds.pointRadius = ds._originalPointRadius;
-                ds.pointBackgroundColor = ds._originalPointBackgroundColor;
-                ds.pointBorderColor = ds._originalPointBorderColor;
-                ds.pointStyle = ds._originalPointStyle;
+                if (ds._originalBorderColor !== undefined) ds.borderColor = ds._originalBorderColor;
+                if (ds._originalBackgroundColor !== undefined) ds.backgroundColor = ds._originalBackgroundColor;
+                if (ds._originalBorderWidth !== undefined) ds.borderWidth = ds._originalBorderWidth;
+                if (ds._originalPointRadius !== undefined) ds.pointRadius = ds._originalPointRadius;
+                if (ds._originalPointBackgroundColor !== undefined) ds.pointBackgroundColor = ds._originalPointBackgroundColor;
+                if (ds._originalPointBorderColor !== undefined) ds.pointBorderColor = ds._originalPointBorderColor;
+                if (ds._originalPointStyle !== undefined) ds.pointStyle = ds._originalPointStyle;
             });
+            // Restore axis colors (title and ticks)
+            if (chart.options.scales.y) {
+                if (chart.options.scales.y.title?._originalColor !== undefined) {
+                    chart.options.scales.y.title.color = chart.options.scales.y.title._originalColor;
+                }
+                if (chart.options.scales.y.ticks?._originalColor !== undefined) {
+                    chart.options.scales.y.ticks.color = chart.options.scales.y.ticks._originalColor;
+                }
+            }
+            if (chart.options.scales.y2) {
+                if (chart.options.scales.y2.title?._originalColor !== undefined) {
+                    chart.options.scales.y2.title.color = chart.options.scales.y2.title._originalColor;
+                }
+                if (chart.options.scales.y2.ticks?._originalColor !== undefined) {
+                    chart.options.scales.y2.ticks.color = chart.options.scales.y2.ticks._originalColor;
+                }
+            }
             highlightActive = false;
-            chart.update('none');
+            chart.update();
         }
 
         // Resizable stats panel
@@ -3398,7 +3511,7 @@
                 const coverallsStats = computeCoverageStats(coverallsData);
                 if (coverallsStats) {
                     const row = document.createElement('tr');
-                    row.onmouseenter = () => highlightChartDataset('#3F5EFB');
+                    row.onmouseenter = () => highlightChartDataset('#3F5EFB', null, 'y2');
                     row.onmouseleave = () => clearChartHighlight();
                     const trendResult = formatTrend(coverallsStats.trend, '#3F5EFB', true, 'y2');
                     const trendCell = trendResult.trendData
@@ -3423,7 +3536,7 @@
                 const codecovStats = computeCoverageStats(codecovData);
                 if (codecovStats) {
                     const row = document.createElement('tr');
-                    row.onmouseenter = () => highlightChartDataset('#F01F7A');
+                    row.onmouseenter = () => highlightChartDataset('#F01F7A', null, 'y2');
                     row.onmouseleave = () => clearChartHighlight();
                     const trendResult = formatTrend(codecovStats.trend, '#F01F7A', true, 'y2');
                     const trendCell = trendResult.trendData
