@@ -361,6 +361,7 @@
             font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
         }
         .color-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .coverage-logo { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
         .bk-emoji { height: 1em; width: 1em; vertical-align: -0.1em; display: inline; }
         .failure-rate { font-size: 9px; color: var(--color-danger-fg); margin-left: auto; padding-left: 6px; white-space: nowrap; }
         .failure-indicator { color: var(--color-danger-fg); font-size: 9px; margin-left: 2px; }
@@ -930,7 +931,7 @@
                     <table role="table" aria-label="Job statistics">
                         <thead>
                             <tr>
-                                <th scope="col" class="sortable" data-sort="job" onclick="handleStatsTableSort('job')">Job <span class="sort-indicator">▲</span></th>
+                                <th scope="col" class="sortable" data-sort="job" onclick="handleStatsTableSort('job')">Job/Report <span class="sort-indicator">▲</span></th>
                                 <th scope="col">Hosts</th>
                                 <th scope="col" class="sortable" data-sort="passRate" title="Pass rate in last 14 days" onclick="handleStatsTableSort('passRate')">Pass Rate <span class="sort-indicator">▲</span></th>
                                 <th scope="col" class="sortable" data-sort="trend" title="Trend over selected time range" onclick="handleStatsTableSort('trend')">Trend <span class="sort-indicator">▲</span></th>
@@ -1345,7 +1346,7 @@
             return 0.5 * (1.0 + sign * y);
         }
 
-        function formatTrend(trend, lineColor = null, percentageMode = false) {
+        function formatTrend(trend, lineColor = null, percentageMode = false, yAxisID = 'y') {
             if (!trend || trend.n < 3) {
                 return { html: '<span style="color: var(--color-fg-muted)" title="Not enough data points">—</span>', trendData: null };
             }
@@ -1406,13 +1407,14 @@
 
             const displayText = significant ? `${pctText}` : 'flat';
 
-            // Encode trend data for hover handlers (include line color)
+            // Encode trend data for hover handlers (include line color and axis)
             const trendData = JSON.stringify({
                 slope: trend.slope,
                 intercept: trend.intercept,
                 minX: trend.minX,
                 maxX: trend.maxX,
-                lineColor: lineColor || 'rgba(128, 128, 128, 0.8)'
+                lineColor: lineColor || 'rgba(128, 128, 128, 0.8)',
+                yAxisID: yAxisID
             }).replace(/'/g, '&#39;');
 
             // Return content designed to be placed in a td with class="trend-cell"
@@ -1425,7 +1427,7 @@
         function showRegressionLine(trendData, lineColor = 'rgba(128, 128, 128, 0.7)') {
             if (!chart || !trendData) return;
 
-            const { slope, intercept, minX, maxX } = trendData;
+            const { slope, intercept, minX, maxX, yAxisID } = trendData;
 
             // Convert days since epoch back to milliseconds
             const msPerDay = 1000 * 60 * 60 * 24;
@@ -1448,6 +1450,7 @@
                 pointRadius: 0,
                 pointHoverRadius: 0,
                 tension: 0,
+                yAxisID: yAxisID || 'y',
                 order: -1  // Draw on top
             };
 
@@ -2264,7 +2267,7 @@
                         hasCoverageData = true;
                         const dsIdx = datasets.length;
                         datasets.push({
-                            label: '📊 Coveralls %',
+                            label: 'Coveralls %',
                             data: coverallsPoints.map(p => ({ x: p.x, y: p.y })),
                             borderColor: '#3F5EFB',
                             borderWidth: 2,
@@ -2292,7 +2295,7 @@
                         hasCoverageData = true;
                         const dsIdx = datasets.length;
                         datasets.push({
-                            label: '📊 Codecov %',
+                            label: 'Codecov %',
                             data: codecovPoints.map(p => ({ x: p.x, y: p.y })),
                             borderColor: '#F01F7A',
                             borderWidth: 2,
@@ -2835,9 +2838,6 @@
                 const hasPointsArray = Array.isArray(ds._originalPointRadius) && ds._originalPointRadius.some(r => r > 0);
                 const hasPointsSingle = !Array.isArray(ds._originalPointRadius) && ds._originalPointRadius > 0;
                 const hasPoints = hasPointsArray || hasPointsSingle;
-                
-                // Coverage datasets (y2 axis) should not be affected by job highlights
-                const isCoverageDataset = ds.yAxisID === 'y2';
 
                 // Helper to mute a color
                 const muteColor = (c) => {
@@ -2845,16 +2845,7 @@
                     return c;
                 };
 
-                if (isCoverageDataset) {
-                    // Keep coverage datasets at their original appearance
-                    ds.borderColor = ds._originalBorderColor;
-                    ds.backgroundColor = ds._originalBackgroundColor;
-                    ds.borderWidth = ds._originalBorderWidth;
-                    ds.pointRadius = ds._originalPointRadius;
-                    ds.pointBackgroundColor = ds._originalPointBackgroundColor;
-                    ds.pointBorderColor = ds._originalPointBorderColor;
-                    ds.pointStyle = ds._originalPointStyle;
-                } else if (isJobMatch && !agent) {
+                if (isJobMatch && !agent) {
                     // Highlight entire job: keep original formatting
                     ds.borderColor = ds._originalBorderColor;
                     ds.backgroundColor = ds._originalBackgroundColor;
@@ -3354,6 +3345,103 @@
                         `;
                         tbody.appendChild(hostRow);
                     }
+                }
+            }
+
+            // Add coverage report rows if coverage jobs are selected
+            if (hasSelectedCoverageJob() && data?.coverage) {
+                const { min: covRangeMin, max: covRangeMax } = getVisibleTimeRange();
+                
+                // Collect coverage data points within time range
+                const coverallsData = [];
+                const codecovData = [];
+                
+                for (const [sha, cov] of Object.entries(data.coverage)) {
+                    const date = new Date(cov.date);
+                    if (date < covRangeMin || date > covRangeMax) continue;
+                    
+                    if (cov.coveralls != null) {
+                        coverallsData.push({ date, value: cov.coveralls });
+                    }
+                    if (cov.codecov != null) {
+                        codecovData.push({ date, value: cov.codecov });
+                    }
+                }
+                
+                // Helper to compute coverage stats
+                function computeCoverageStats(dataPoints) {
+                    if (dataPoints.length === 0) return null;
+                    const values = dataPoints.map(d => d.value);
+                    const sorted = [...values].sort((a, b) => a - b);
+                    const median = sorted[Math.floor(sorted.length / 2)];
+                    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
+                    const std = Math.sqrt(variance);
+                    
+                    // Compute trend
+                    const sortedByDate = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
+                    const trend = sortedByDate.length >= 2 ? computeTrend(sortedByDate.map(d => ({ date: d.date, duration: d.value }))) : null;
+                    
+                    return { median, mean, min, max, std, trend, n: values.length };
+                }
+                
+                // Add separator row before coverage reports
+                if (jobStats.length > 0) {
+                    const sepRow = document.createElement('tr');
+                    sepRow.innerHTML = '<td colspan="10" style="padding: 4px; border-bottom: 1px solid var(--color-border-muted);"></td>';
+                    tbody.appendChild(sepRow);
+                }
+                
+                // Add Coveralls row
+                const coverallsStats = computeCoverageStats(coverallsData);
+                if (coverallsStats) {
+                    const row = document.createElement('tr');
+                    row.onmouseenter = () => highlightChartDataset('#3F5EFB');
+                    row.onmouseleave = () => clearChartHighlight();
+                    const trendResult = formatTrend(coverallsStats.trend, '#3F5EFB', true, 'y2');
+                    const trendCell = trendResult.trendData
+                        ? `<td class="trend-cell" data-trend='${trendResult.trendData}'>${trendResult.html}</td>`
+                        : `<td>${trendResult.html}</td>`;
+                    row.innerHTML = `
+                        <td><svg class="coverage-logo" viewBox="0 0 24 24" fill="#3F5EFB"><path d="M0 12v12h24V0H0v12zm13.195-6.187l1.167 3.515 2.255.005c1.238.005 2.916.019 3.727.037l1.472.028-2.968 2.152c-1.632 1.181-2.976 2.18-2.99 2.212-.01.033.488 1.627 1.106 3.54.619 1.917 1.12 3.496 1.116 3.51-.005.019-1.343-.943-2.972-2.137l-2.963-2.161-2.972 2.161c-1.634 1.19-2.976 2.152-2.981 2.137-.005-.014.497-1.593 1.115-3.51.619-1.913 1.116-3.507 1.107-3.54-.014-.032-1.358-1.031-2.99-2.212L2.184 9.398l1.472-.028c.81-.018 2.488-.032 3.727-.037l2.254-.005 1.168-3.515a512.9 512.9 0 011.195-3.53c.005 0 .544 1.587 1.195 3.53z"/></svg>Coveralls</td>
+                        <td><span style="color: var(--color-fg-muted)">—</span></td>
+                        <td><span style="color: var(--color-fg-muted)">—</span></td>
+                        ${trendCell}
+                        <td>${coverallsStats.median.toFixed(2)}%</td>
+                        <td>${coverallsStats.mean.toFixed(2)}%</td>
+                        <td>${coverallsStats.min.toFixed(2)}%</td>
+                        <td>${coverallsStats.max.toFixed(2)}%</td>
+                        <td>±${coverallsStats.std.toFixed(2)}%</td>
+                        <td>${coverallsStats.n}</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+                
+                // Add Codecov row
+                const codecovStats = computeCoverageStats(codecovData);
+                if (codecovStats) {
+                    const row = document.createElement('tr');
+                    row.onmouseenter = () => highlightChartDataset('#F01F7A');
+                    row.onmouseleave = () => clearChartHighlight();
+                    const trendResult = formatTrend(codecovStats.trend, '#F01F7A', true, 'y2');
+                    const trendCell = trendResult.trendData
+                        ? `<td class="trend-cell" data-trend='${trendResult.trendData}'>${trendResult.html}</td>`
+                        : `<td>${trendResult.html}</td>`;
+                    row.innerHTML = `
+                        <td><svg class="coverage-logo" viewBox="0 0 24 24" fill="#F01F7A"><path d="M12.006.066c-6.63 0-12 5.37-12 12 0 6.631 5.37 12 12 12 6.631 0 12-5.369 12-12 0-6.63-5.369-12-12-12zm0 2.115a9.885 9.885 0 11-.002 19.77 9.885 9.885 0 01.002-19.77zm-.072 2.418a7.471 7.471 0 00-2.26.39L8.148 9.564a4.318 4.318 0 114.312 4.312l.002-.001a4.268 4.268 0 01-1.915-.467l-1.56 4.568a7.473 7.473 0 109.086-9.82 7.514 7.514 0 00-6.14-3.557z"/></svg>Codecov</td>
+                        <td><span style="color: var(--color-fg-muted)">—</span></td>
+                        <td><span style="color: var(--color-fg-muted)">—</span></td>
+                        ${trendCell}
+                        <td>${codecovStats.median.toFixed(2)}%</td>
+                        <td>${codecovStats.mean.toFixed(2)}%</td>
+                        <td>${codecovStats.min.toFixed(2)}%</td>
+                        <td>${codecovStats.max.toFixed(2)}%</td>
+                        <td>±${codecovStats.std.toFixed(2)}%</td>
+                        <td>${codecovStats.n}</td>
+                    `;
+                    tbody.appendChild(row);
                 }
             }
 
