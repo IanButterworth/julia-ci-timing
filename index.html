@@ -1147,11 +1147,13 @@
             if (seconds == null) return '<span style="color: var(--color-fg-muted)">—</span>';
             if (seconds < 60) return `${seconds.toFixed(1)}s`;
             const mins = Math.floor(seconds / 60);
-            const secs = (seconds % 60).toFixed(0);
-            if (mins < 60) return `${mins}m ${secs}s`;
+            const secs = Math.round(seconds % 60);
+            if (mins < 60) {
+                return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+            }
             const hours = Math.floor(mins / 60);
             const remainMins = mins % 60;
-            return `${hours}h ${remainMins}m`;
+            return remainMins > 0 ? `${hours}h ${remainMins}m` : `${hours}h`;
         }
 
         // Compute trend using linear regression with statistical significance
