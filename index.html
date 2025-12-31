@@ -305,6 +305,13 @@
             transition: max-height 0.25s ease, opacity 0.2s ease;
             overflow: hidden;
         }
+        .job-list-section .collapsible-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
         .collapsible-content.collapsed {
             max-height: 0 !important;
             opacity: 0;
@@ -746,6 +753,7 @@
             }
             .job-list-section .collapsible-content {
                 max-height: 150px;
+                overflow-y: auto;
             }
             .job-list-header {
                 display: none; /* Hide old header, use section-header instead */
