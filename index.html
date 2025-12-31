@@ -896,6 +896,7 @@
                 <div><span class="label">Title:</span> <span id="popup-message"></span></div>
                 <div><span class="label">Author:</span> <span id="popup-author"></span></div>
                 <div><span class="label">Build:</span> <a id="popup-buildkite-link" href="#" target="_blank"><span id="popup-build"></span></a></div>
+                <div id="popup-coverage-links" style="display: none;"><span class="label">Coverage:</span> <span id="popup-coverage-value"></span></div>
             </div>
         </div>
     </div>
@@ -987,6 +988,31 @@
         // === Helper Functions ===
         const isFailedState = (state) => FAILED_STATES.includes(state);
         const getRunState = (run) => run.state || 'passed';
+
+        // Check if any selected job is a coverage job
+        function hasSelectedCoverageJob() {
+            for (const jobName of selectedJobs) {
+                const lower = jobName.toLowerCase();
+                if (lower.includes('coverage')) return true;
+            }
+            return false;
+        }
+
+        // Get coverage data from pre-fetched data in timing_summary.json
+        function getCoverageForCommit(commit) {
+            if (!data?.coverage) return null;
+            // Try full commit SHA first, then prefix match
+            if (data.coverage[commit]) {
+                return data.coverage[commit];
+            }
+            // Try prefix match (commits in job data are truncated to 8 chars)
+            for (const [sha, cov] of Object.entries(data.coverage)) {
+                if (sha.startsWith(commit) || commit.startsWith(sha.slice(0, 8))) {
+                    return cov;
+                }
+            }
+            return null;
+        }
 
         function refreshAllUI() {
             updateMatrixHighlights();
@@ -2020,6 +2046,7 @@
             const datasets = [];
             chartMetadata = {};
             const cutoff = getTimeRangeCutoff();
+            const showCoverage = hasSelectedCoverageJob();
 
             for (const jobName of selectedArray) {
                 const jobData = data.jobs[jobName];
@@ -2156,7 +2183,8 @@
                         pointBackgroundColor: pointColors,
                         pointBorderColor: pointColors,
                         pointStyle: pointStyles,
-                        spanGaps: true
+                        spanGaps: true,
+                        yAxisID: 'y'
                     });
                 } else {
                     // Two datasets: smoothed line + raw points
@@ -2171,7 +2199,8 @@
                         tension: 0.4,
                         pointRadius: 0,
                         pointHoverRadius: 0,
-                        spanGaps: true
+                        spanGaps: true,
+                        yAxisID: 'y'
                     });
                     // Points dataset (raw values, no line)
                     datasets.push({
@@ -2185,12 +2214,106 @@
                         pointHoverRadius: 3,
                         pointStyle: pointStyles,
                         pointBorderColor: pointColors,
-                        pointBackgroundColor: pointColors
+                        pointBackgroundColor: pointColors,
+                        yAxisID: 'y'
                     });
                     // Also track metadata for points dataset
                     points.forEach((pt, idx) => {
                         chartMetadata[`${datasetIdx + 1}-${idx}`] = pt.meta;
                     });
+                }
+            }
+
+            // Add coverage datasets if coverage jobs are selected
+            let hasCoverageData = false;
+            if (showCoverage && data?.coverage) {
+                // Build coverage points from Finalize parallel coverage job
+                const finalize = data.jobs['Finalize parallel coverage'];
+                if (finalize) {
+                    const coverallsPoints = [];
+                    const codecovPoints = [];
+
+                    for (const run of finalize.recent) {
+                        if (run.state !== 'passed') continue;
+                        const date = new Date(run.date);
+                        if (cutoff && date < cutoff) continue;
+
+                        const cov = getCoverageForCommit(run.commit);
+                        if (cov?.coveralls != null) {
+                            coverallsPoints.push({
+                                x: date,
+                                y: cov.coveralls,
+                                meta: { commit: run.commit, build: run.build, date: run.date }
+                            });
+                        }
+                        if (cov?.codecov != null) {
+                            codecovPoints.push({
+                                x: date,
+                                y: cov.codecov,
+                                meta: { commit: run.commit, build: run.build, date: run.date }
+                            });
+                        }
+                    }
+
+                    // Sort by date
+                    coverallsPoints.sort((a, b) => a.x - b.x);
+                    codecovPoints.sort((a, b) => a.x - b.x);
+
+                    // Add Coveralls dataset
+                    if (coverallsPoints.length > 0) {
+                        hasCoverageData = true;
+                        const dsIdx = datasets.length;
+                        datasets.push({
+                            label: '📊 Coveralls %',
+                            data: coverallsPoints.map(p => ({ x: p.x, y: p.y })),
+                            borderColor: '#3F5EFB',
+                            borderWidth: 2,
+                            backgroundColor: '#3F5EFB20',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            pointBackgroundColor: '#3F5EFB',
+                            pointBorderColor: '#3F5EFB',
+                            spanGaps: true,
+                            yAxisID: 'y2'
+                        });
+                        coverallsPoints.forEach((pt, idx) => {
+                            chartMetadata[`${dsIdx}-${idx}`] = {
+                                ...pt.meta,
+                                job: 'Coveralls Coverage',
+                                coverage: pt.y
+                            };
+                        });
+                    }
+
+                    // Add Codecov dataset
+                    if (codecovPoints.length > 0) {
+                        hasCoverageData = true;
+                        const dsIdx = datasets.length;
+                        datasets.push({
+                            label: '📊 Codecov %',
+                            data: codecovPoints.map(p => ({ x: p.x, y: p.y })),
+                            borderColor: '#F01F7A',
+                            borderWidth: 2,
+                            backgroundColor: '#F01F7A20',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            pointBackgroundColor: '#F01F7A',
+                            pointBorderColor: '#F01F7A',
+                            spanGaps: true,
+                            yAxisID: 'y2'
+                        });
+                        codecovPoints.forEach((pt, idx) => {
+                            chartMetadata[`${dsIdx}-${idx}`] = {
+                                ...pt.meta,
+                                job: 'Codecov Coverage',
+                                coverage: pt.y
+                            };
+                        });
+                    }
                 }
             }
 
@@ -2276,6 +2399,16 @@
                                     const key = `${ctx.datasetIndex}-${ctx.dataIndex}`;
                                     const meta = chartMetadata[key];
                                     if (!meta) return null;
+
+                                    // Coverage dataset tooltip
+                                    if (meta.coverage != null) {
+                                        return [
+                                            `${meta.coverage.toFixed(2)}%`,
+                                            `Commit: ${meta.commit?.slice(0, 8) || ''}`
+                                        ];
+                                    }
+
+                                    // Duration dataset tooltip
                                     const getStateDisplay = (state) => {
                                         if (state === 'timed_out') return '⤒ timed out';
                                         if (state === 'failed') return '❌ failed';
@@ -2456,6 +2589,25 @@
                                 }
                                 axis.ticks = ticks;
                             }
+                        },
+                        y2: {
+                            display: hasCoverageData,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            title: {
+                                display: hasCoverageData,
+                                text: 'Coverage %',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                callback: (v) => v + '%',
+                                stepSize: 10
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
                         }
                     },
                     onClick: (evt, elements) => {
@@ -2472,33 +2624,86 @@
 
         function showPopup(meta) {
             document.getElementById('popup-job').innerHTML = convertEmoji(meta.job);
-            const state = meta.state || 'passed';
-            const stateEl = document.getElementById('popup-state');
-            const failed = isFailedState(state);
-            const stateIcon = failed ? '❌' : '✅';
-            const stateText = state === 'timed_out' ? 'timed out' : state;
-            stateEl.innerHTML = `${stateIcon} ${stateText}`;
-            stateEl.style.color = failed ? 'var(--color-danger-fg)' :
-                                  state === 'passed' ? 'var(--color-success-fg)' : 'inherit';
-            document.getElementById('popup-duration').textContent = formatDuration(meta.duration);
-            document.getElementById('popup-agent').textContent = meta.agent || '(unknown)';
-            document.getElementById('popup-date').textContent = meta.date;
-            document.getElementById('popup-commit').textContent = meta.commit;
-            document.getElementById('popup-message').textContent = meta.message || '(no message)';
-            document.getElementById('popup-author').textContent = meta.author || '(unknown)';
-            document.getElementById('popup-build').textContent = `#${meta.build}`;
+            const coverageLinksEl = document.getElementById('popup-coverage-links');
+            
+            // Check if this is a coverage data point
+            const isCoverage = meta.coverage != null;
+            
+            if (isCoverage) {
+                // Coverage-specific popup
+                const state = 'passed';
+                const stateEl = document.getElementById('popup-state');
+                stateEl.innerHTML = '✅ passed';
+                stateEl.style.color = 'var(--color-success-fg)';
+                document.getElementById('popup-duration').innerHTML = 
+                    `<span style="color: var(--color-fg-muted)">—</span>`;
+                document.getElementById('popup-agent').textContent = '(n/a)';
+                document.getElementById('popup-date').textContent = meta.date;
+                document.getElementById('popup-commit').textContent = meta.commit;
+                document.getElementById('popup-message').textContent = '(coverage data)';
+                document.getElementById('popup-author').textContent = '(n/a)';
+                document.getElementById('popup-build').textContent = `#${meta.build}`;
+                
+                // Get full commit SHA from coverage data
+                const fullCommit = getFullCommitSha(meta.commit);
+                
+                document.getElementById('popup-github-link').href =
+                    `https://github.com/JuliaLang/julia/commit/${fullCommit}`;
+                document.getElementById('popup-buildkite-link').href =
+                    `https://buildkite.com/julialang/julia-master-scheduled/builds/${meta.build}`;
+                
+                // Show coverage links
+                coverageLinksEl.style.display = '';
+                const isCoveralls = meta.job.includes('Coveralls');
+                const coverageUrl = isCoveralls
+                    ? `https://coveralls.io/builds/${fullCommit}`
+                    : `https://app.codecov.io/gh/JuliaLang/julia/commit/${fullCommit}`;
+                const serviceName = isCoveralls ? 'Coveralls' : 'Codecov';
+                document.getElementById('popup-coverage-value').innerHTML = 
+                    `<strong>${meta.coverage.toFixed(2)}%</strong> on <a href="${coverageUrl}" target="_blank">${serviceName}</a>`;
+            } else {
+                // Regular job popup
+                const state = meta.state || 'passed';
+                const stateEl = document.getElementById('popup-state');
+                const failed = isFailedState(state);
+                const stateIcon = failed ? '❌' : '✅';
+                const stateText = state === 'timed_out' ? 'timed out' : state;
+                stateEl.innerHTML = `${stateIcon} ${stateText}`;
+                stateEl.style.color = failed ? 'var(--color-danger-fg)' :
+                                      state === 'passed' ? 'var(--color-success-fg)' : 'inherit';
+                document.getElementById('popup-duration').textContent = formatDuration(meta.duration);
+                document.getElementById('popup-agent').textContent = meta.agent || '(unknown)';
+                document.getElementById('popup-date').textContent = meta.date;
+                document.getElementById('popup-commit').textContent = meta.commit;
+                document.getElementById('popup-message').textContent = meta.message || '(no message)';
+                document.getElementById('popup-author').textContent = meta.author || '(unknown)';
+                document.getElementById('popup-build').textContent = `#${meta.build}`;
 
-            document.getElementById('popup-github-link').href =
-                `https://github.com/JuliaLang/julia/commit/${meta.commit}`;
+                document.getElementById('popup-github-link').href =
+                    `https://github.com/JuliaLang/julia/commit/${meta.commit}`;
 
-            // Use stored pipeline, with fallback heuristic for old data
-            const pipeline = meta.pipeline ||
-                (meta.job.toLowerCase().includes('coverage') || meta.job.toLowerCase().includes('srcassert')
-                    ? 'julia-master-scheduled' : 'julia-master');
-            document.getElementById('popup-buildkite-link').href =
-                `https://buildkite.com/julialang/${pipeline}/builds/${meta.build}`;
+                // Use stored pipeline, with fallback heuristic for old data
+                const pipeline = meta.pipeline ||
+                    (meta.job.toLowerCase().includes('coverage') || meta.job.toLowerCase().includes('srcassert')
+                        ? 'julia-master-scheduled' : 'julia-master');
+                document.getElementById('popup-buildkite-link').href =
+                    `https://buildkite.com/julialang/${pipeline}/builds/${meta.build}`;
+                
+                // Hide coverage links for regular jobs
+                coverageLinksEl.style.display = 'none';
+            }
 
             document.getElementById('popup-overlay').classList.add('visible');
+        }
+        
+        // Helper to get full commit SHA from coverage data
+        function getFullCommitSha(shortCommit) {
+            if (!data?.coverage) return shortCommit;
+            // Look for a full SHA that starts with the short commit
+            for (const sha of Object.keys(data.coverage)) {
+                if (sha.startsWith(shortCommit)) return sha;
+            }
+            return shortCommit;
         }
 
         function closePopup(event) {
@@ -2630,6 +2835,9 @@
                 const hasPointsArray = Array.isArray(ds._originalPointRadius) && ds._originalPointRadius.some(r => r > 0);
                 const hasPointsSingle = !Array.isArray(ds._originalPointRadius) && ds._originalPointRadius > 0;
                 const hasPoints = hasPointsArray || hasPointsSingle;
+                
+                // Coverage datasets (y2 axis) should not be affected by job highlights
+                const isCoverageDataset = ds.yAxisID === 'y2';
 
                 // Helper to mute a color
                 const muteColor = (c) => {
@@ -2637,7 +2845,16 @@
                     return c;
                 };
 
-                if (isJobMatch && !agent) {
+                if (isCoverageDataset) {
+                    // Keep coverage datasets at their original appearance
+                    ds.borderColor = ds._originalBorderColor;
+                    ds.backgroundColor = ds._originalBackgroundColor;
+                    ds.borderWidth = ds._originalBorderWidth;
+                    ds.pointRadius = ds._originalPointRadius;
+                    ds.pointBackgroundColor = ds._originalPointBackgroundColor;
+                    ds.pointBorderColor = ds._originalPointBorderColor;
+                    ds.pointStyle = ds._originalPointStyle;
+                } else if (isJobMatch && !agent) {
                     // Highlight entire job: keep original formatting
                     ds.borderColor = ds._originalBorderColor;
                     ds.backgroundColor = ds._originalBackgroundColor;

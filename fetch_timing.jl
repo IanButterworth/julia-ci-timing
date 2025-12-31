@@ -282,7 +282,121 @@ function get_fully_captured_threshold(existing_data; key_jobs=[":linux: test x86
             scheduled=scheduled_min == typemax(Int) ? 0 : scheduled_min)
 end
 
-function generate_json_output(job_timings; output_dir="data")
+# Fetch coverage data from Coveralls and Codecov APIs
+function fetch_coverage_data(existing_data; max_pages=20)
+    # Load existing coverage data
+    existing_coverage = get(existing_data, :coverage, Dict())
+    coverage = Dict{String, Any}()
+    
+    # Copy existing coverage data
+    for (commit, cov) in pairs(existing_coverage)
+        coverage[String(commit)] = Dict(
+            "coveralls" => get(cov, :coveralls, nothing),
+            "codecov" => get(cov, :codecov, nothing),
+            "date" => get(cov, :date, nothing)
+        )
+    end
+    
+    @info "Loaded existing coverage data" entries=length(coverage)
+    
+    # Fetch new data from Coveralls
+    try
+        for page in 1:max_pages
+            url = "https://coveralls.io/github/JuliaLang/julia.json?page=$page"
+            resp = HTTP.get(url; status_exception=false)
+            if resp.status != 200
+                @warn "Coveralls API request failed" page resp.status
+                break
+            end
+            
+            data = JSON3.read(resp.body)
+            builds = get(data, :builds, [])
+            isempty(builds) && break
+            
+            new_in_page = 0
+            for build in builds
+                commit = get(build, :commit_sha, nothing)
+                commit === nothing && continue
+                commit = String(commit)
+                
+                # Add or update entry
+                if !haskey(coverage, commit)
+                    coverage[commit] = Dict(
+                        "coveralls" => get(build, :covered_percent, nothing),
+                        "codecov" => nothing,
+                        "date" => get(build, :created_at, nothing)
+                    )
+                    new_in_page += 1
+                elseif coverage[commit]["coveralls"] === nothing
+                    coverage[commit]["coveralls"] = get(build, :covered_percent, nothing)
+                    new_in_page += 1
+                end
+            end
+            
+            @info "Fetched Coveralls page $page" new_entries=new_in_page
+            
+            # Stop if no new data
+            new_in_page == 0 && page > 2 && break
+        end
+    catch e
+        @warn "Failed to fetch coverage data from Coveralls" error=e
+    end
+    
+    # Fetch data from Codecov API
+    try
+        page = 1
+        while page <= max_pages
+            url = "https://codecov.io/api/v2/github/JuliaLang/repos/julia/commits?branch=master&page=$page&page_size=100"
+            resp = HTTP.get(url; status_exception=false)
+            if resp.status != 200
+                @warn "Codecov API request failed" page resp.status
+                break
+            end
+            
+            data = JSON3.read(resp.body)
+            results = get(data, :results, [])
+            isempty(results) && break
+            
+            new_in_page = 0
+            for commit_data in results
+                commit = get(commit_data, :commitid, nothing)
+                commit === nothing && continue
+                commit = String(commit)
+                
+                totals = get(commit_data, :totals, nothing)
+                cov_percent = totals !== nothing ? get(totals, :coverage, nothing) : nothing
+                
+                # Add or update entry
+                if !haskey(coverage, commit)
+                    coverage[commit] = Dict(
+                        "coveralls" => nothing,
+                        "codecov" => cov_percent,
+                        "date" => get(commit_data, :timestamp, nothing)
+                    )
+                    new_in_page += 1
+                elseif coverage[commit]["codecov"] === nothing && cov_percent !== nothing
+                    coverage[commit]["codecov"] = cov_percent
+                    new_in_page += 1
+                end
+            end
+            
+            @info "Fetched Codecov page $page" new_entries=new_in_page
+            
+            # Stop if no new data
+            new_in_page == 0 && page > 2 && break
+            
+            # Check if there are more pages
+            get(data, :next, nothing) === nothing && break
+            page += 1
+        end
+    catch e
+        @warn "Failed to fetch coverage data from Codecov" error=e
+    end
+    
+    return coverage
+end
+
+function generate_json_output(job_timings; output_dir="data", coverage_data=Dict())
     mkpath(output_dir)
 
     # Load existing data to preserve history beyond Buildkite's window
@@ -363,21 +477,42 @@ function generate_json_output(job_timings; output_dir="data")
         )
     end
 
-    # Only write if jobs data actually changed (ignore generated_at timestamp)
+    # Add coverage data to summary
+    if !isempty(coverage_data)
+        summary["coverage"] = SortedDict(coverage_data)
+    end
+
+    # Only write if data actually changed (ignore generated_at timestamp)
     summary_file = joinpath(output_dir, "timing_summary.json")
 
-    # Compare serialized jobs data (normalize by re-serializing both sides)
+    # Compare serialized data (normalize by re-serializing both sides)
     new_jobs_json = sprint(io -> JSON3.pretty(io, summary["jobs"]))
+    new_coverage_json = sprint(io -> JSON3.pretty(io, get(summary, "coverage", Dict())))
+    
     if isfile(summary_file)
         existing_content = read(summary_file, String)
         existing_parsed = JSON3.read(existing_content)
         existing_jobs = get(existing_parsed, :jobs, nothing)
+        existing_coverage = get(existing_parsed, :coverage, nothing)
+        
+        jobs_unchanged = false
+        coverage_unchanged = false
+        
         if existing_jobs !== nothing
             existing_jobs_json = sprint(io -> JSON3.pretty(io, existing_jobs))
-            if existing_jobs_json == new_jobs_json
-                @info "No changes to job data, skipping write" file=summary_file
-                return summary_file
-            end
+            jobs_unchanged = existing_jobs_json == new_jobs_json
+        end
+        
+        if existing_coverage !== nothing
+            existing_coverage_json = sprint(io -> JSON3.pretty(io, existing_coverage))
+            coverage_unchanged = existing_coverage_json == new_coverage_json
+        elseif isempty(coverage_data)
+            coverage_unchanged = true
+        end
+        
+        if jobs_unchanged && coverage_unchanged
+            @info "No changes to data, skipping write" file=summary_file
+            return summary_file
         end
     end
 
@@ -427,8 +562,12 @@ function main()
     end
     @info "Found jobs in new builds" count=length(job_timings)
 
+    @info "Fetching coverage data from Coveralls..."
+    coverage_data = fetch_coverage_data(existing)
+    @info "Coverage data" entries=length(coverage_data)
+
     @info "Generating JSON output..."
-    generate_json_output(job_timings)
+    generate_json_output(job_timings; coverage_data)
 
     return 0
 end
